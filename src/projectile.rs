@@ -17,7 +17,7 @@ pub fn player_fire(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::KeyJ) || mouse_input.just_pressed(MouseButton::Left) {
+    if keyboard_input.just_pressed(KeyCode::ShiftLeft) || keyboard_input.just_pressed(KeyCode::ShiftRight) {
         if let Some(player_transform) = player_query.iter().next() {
             // Get forward vector based on player's current rotation
             let forward = player_transform.rotation * Vec3::new(0.0, 0.0, 1.0);

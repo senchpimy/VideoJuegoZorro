@@ -44,8 +44,15 @@ pub fn spawn_player(
     asset_server: Res<AssetServer>,
     mut graphs: ResMut<Assets<AnimationGraph>>,
 ) {
-    // Start player at the edge of the world, far from the maze
-    let start_pos = Vec3::new(0.0, terrain_height(0.0, 0.0) + 1.0, 0.0);
+    // Find start position in the maze data
+    let mut start_pos = crate::maze::MAZE_OFFSET; // Default to center if not found
+    for (z, row) in crate::maze::MAZE_DATA.iter().enumerate() {
+        for (x, &cell) in row.iter().enumerate() {
+            if cell == 2 {
+                start_pos = crate::maze::MAZE_OFFSET + Vec3::new(x as f32 * 2.0, 1.0, z as f32 * 2.0);
+            }
+        }
+    }
 
     // Load animations
     let walk_anim = asset_server.load(GltfAssetLabel::Animation(1).from_asset("models/fox.glb"));

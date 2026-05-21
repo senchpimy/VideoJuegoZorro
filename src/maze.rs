@@ -230,13 +230,13 @@ fn spawn_maze_at(
             }
             if cell == 5 {
                 let patrol_points = vec![
-                    Vec3::new(pos.x - 3.0, 0.6, pos.z),
-                    Vec3::new(pos.x + 3.0, 0.6, pos.z),
+                    Vec3::new(pos.x - 3.0, 3.2, pos.z),
+                    Vec3::new(pos.x + 3.0, 3.2, pos.z),
                 ];
                 commands.spawn((
                     SceneRoot(asset_server.load("models/scorcher_enemy.glb#Scene0")),
-                    Transform::from_translation(Vec3::new(pos.x, 0.0, pos.z))
-                        .with_scale(Vec3::splat(0.05)),
+                    Transform::from_translation(Vec3::new(pos.x, 6., pos.z))
+                        .with_scale(Vec3::splat(0.012)),
                     Enemy {
                         speed: 1.5,
                         patrol_points,

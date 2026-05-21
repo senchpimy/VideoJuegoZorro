@@ -40,7 +40,7 @@ pub fn check_enemy_projectile_collision(
     mut enemy_query: Query<(Entity, &Transform, &mut Enemy)>,
     projectile_query: Query<(Entity, &Transform), With<Projectile>>,
 ) {
-    let enemy_radius = 0.6;
+    let enemy_radius = 0.4;
     let proj_radius = 0.3;
 
     for (enemy_entity, enemy_transform, mut enemy) in &mut enemy_query {
@@ -67,7 +67,7 @@ pub fn check_enemy_player_collision(
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
     let player_radius = 0.6;
-    let enemy_radius = 0.6;
+    let enemy_radius = 0.4;
     
     for (mut player_transform, mut player) in &mut player_query {
         if player.invulnerable_timer > 0.0 || player.shield_timer > 0.0 {
