@@ -41,6 +41,7 @@ fn main() {
         .add_systems(Update, (
             player::link_player_animations.run_if(in_state(GameState::Playing)),
             player::player_movement.run_if(in_state(GameState::Playing)),
+            player::player_grab_block.run_if(in_state(GameState::Playing)),
             platform::move_platforms.run_if(in_state(GameState::Playing)),
             projectile::player_fire.run_if(in_state(GameState::Playing)),
             projectile::update_projectiles.run_if(in_state(GameState::Playing)),

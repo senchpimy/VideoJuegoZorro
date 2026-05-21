@@ -10,6 +10,7 @@ pub struct TutorialElement;
 #[derive(Component)]
 pub struct PhysicsCube {
     pub timer: Timer,
+    pub is_held: bool,
 }
 
 #[derive(Resource)]
@@ -68,7 +69,7 @@ pub fn spawn_tutorial(
     // ROOM 4: POWERUPS
     let room4_pos = room3_pos + Vec3::new(0.0, 0.0, -20.0);
     spawn_room(&mut commands, &mut meshes, floor_material.clone(), wall_material.clone(), 
-        room4_pos, "POWER-UPS\nMEJORA TUS HABILIDADES", true, true, false, false);
+        room4_pos, "POWER-UPS\nMEJORA TUS HABILIDADES", true, true, true, false);
     
     // Powerups
     commands.spawn((
@@ -91,11 +92,6 @@ pub fn spawn_tutorial(
     let room5_pos = room4_pos + Vec3::new(20.0, 0.0, 0.0);
     spawn_room(&mut commands, &mut meshes, floor_material.clone(), wall_material.clone(), 
         room5_pos, "FISICAS\nCUBOS QUE CAEN", false, false, false, true);
-    
-    // Add doorway between 4 and 5
-    // Room 4 East opening
-    spawn_wall(&mut commands, &mut meshes, wall_material.clone(), room4_pos + Vec3::new(10.0, 2.5, -7.0), Vec3::new(0.5, 5.0, 6.0));
-    spawn_wall(&mut commands, &mut meshes, wall_material.clone(), room4_pos + Vec3::new(10.0, 2.5, 7.0), Vec3::new(0.5, 5.0, 6.0));
     
     // Static Floor for physics in Room 5
     commands.spawn((
@@ -138,6 +134,7 @@ pub fn spawn_physics_cubes(
             Collider::cuboid(1.0, 1.0, 1.0),
             PhysicsCube {
                 timer: Timer::from_seconds(5.0, TimerMode::Once),
+                is_held: false,
             },
             TutorialElement,
         ));
@@ -150,6 +147,9 @@ pub fn update_physics_cubes(
     mut query: Query<(Entity, &mut PhysicsCube)>,
 ) {
     for (entity, mut cube) in &mut query {
+        if cube.is_held {
+            continue;
+        }
         if cube.timer.tick(time.delta()).just_finished() {
             commands.entity(entity).despawn();
         }

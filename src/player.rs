@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use crate::collision::{check_collision, Wall};
 use crate::maze::terrain_height;
 use crate::platform::MovingPlatform;
+use avian3d::prelude::{RigidBody, LinearVelocity, AngularVelocity};
+use crate::tutorial::PhysicsCube;
 
 #[derive(Component)]
 pub struct Player {
@@ -13,6 +15,7 @@ pub struct Player {
     pub score: u32,
     pub speed_boost_timer: f32,
     pub shield_timer: f32,
+    pub held_cube: Option<Entity>,
 }
 
 impl Default for Player {
@@ -26,6 +29,7 @@ impl Default for Player {
             score: 0,
             speed_boost_timer: 0.0,
             shield_timer: 0.0,
+            held_cube: None,
         }
     }
 }
@@ -220,6 +224,73 @@ pub fn player_movement(
                 if let Ok((mut anim_player, mut transitions)) = anim_player_query.get_mut(link.0) {
                     transitions.play(&mut anim_player, anim.idle_node, std::time::Duration::from_millis(200)).repeat();
                 }
+            }
+        }
+    }
+}
+
+pub fn player_grab_block(
+    mut commands: Commands,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut player_query: Query<(&Transform, &mut Player)>,
+    mut cube_query: Query<(Entity, &mut Transform, &mut PhysicsCube), Without<Player>>,
+) {
+    let ctrl_pressed = keyboard_input.pressed(KeyCode::ControlLeft) || keyboard_input.pressed(KeyCode::ControlRight);
+
+    for (player_transform, mut player) in &mut player_query {
+        if let Some(held_entity) = player.held_cube {
+            // Check if we should release it
+            if !ctrl_pressed {
+                // Release the cube
+                if let Ok((_, _, mut cube)) = cube_query.get_mut(held_entity) {
+                    cube.is_held = false;
+                    cube.timer.reset(); // Give it a fresh 5 seconds of life after being dropped
+                    commands.entity(held_entity).insert((
+                        RigidBody::Dynamic,
+                        LinearVelocity::ZERO,
+                        AngularVelocity::ZERO,
+                    ));
+                }
+                player.held_cube = None;
+            } else {
+                // Update held cube position/rotation
+                if let Ok((_, mut cube_transform, _)) = cube_query.get_mut(held_entity) {
+                    // Position 1.5 units in front of player, 1.0 unit up
+                    let target_pos = player_transform.translation + player_transform.rotation * Vec3::new(0.0, 1.0, 1.5);
+                    cube_transform.translation = target_pos;
+                    cube_transform.rotation = player_transform.rotation;
+                } else {
+                    // Held entity might have been despawned
+                    player.held_cube = None;
+                }
+            }
+        } else if ctrl_pressed {
+            // Try to grab the closest cube
+            let mut closest_cube: Option<(Entity, f32)> = None;
+            for (cube_entity, cube_transform, _) in cube_query.iter() {
+                let dist = player_transform.translation.distance(cube_transform.translation);
+                // Grab range: 3.0 units
+                if dist < 3.0 {
+                    if let Some((_, closest_dist)) = closest_cube {
+                        if dist < closest_dist {
+                            closest_cube = Some((cube_entity, dist));
+                        }
+                    } else {
+                        closest_cube = Some((cube_entity, dist));
+                    }
+                }
+            }
+
+            if let Some((cube_entity, _)) = closest_cube {
+                player.held_cube = Some(cube_entity);
+                if let Ok((_, _, mut cube)) = cube_query.get_mut(cube_entity) {
+                    cube.is_held = true;
+                }
+                commands.entity(cube_entity).insert((
+                    RigidBody::Kinematic,
+                    LinearVelocity::ZERO,
+                    AngularVelocity::ZERO,
+                ));
             }
         }
     }
