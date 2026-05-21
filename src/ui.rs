@@ -14,17 +14,9 @@ pub struct PowerUpText;
 pub struct GameUi;
 
 pub fn setup_ui(mut commands: Commands) {
-    // 2D Camera for UI with higher order
-    commands.spawn((
-        Camera2d::default(),
-        Camera {
-            order: 1,
-            ..default()
-        },
-        GameUi,
-    ));
-
     // Parent container for top-left UI
+    // In Bevy 0.15+, UI is rendered by the main camera by default.
+    // No extra camera needed unless we want a separate layer.
     commands.spawn((
         Node {
             position_type: PositionType::Absolute,

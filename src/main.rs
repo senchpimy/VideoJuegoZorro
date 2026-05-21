@@ -9,6 +9,7 @@ mod platform;
 mod enemy;
 mod projectile;
 mod powerup;
+mod tutorial;
 
 use bevy::prelude::*;
 use bevy::app::AppExit;
@@ -34,7 +35,7 @@ fn main() {
         .add_systems(OnExit(GameState::Menu), menu::cleanup_menu)
 
         // Playing State
-        .add_systems(OnEnter(GameState::Playing), (maze::spawn_world, player::spawn_player, ui::setup_ui))
+        .add_systems(OnEnter(GameState::Playing), (maze::spawn_world, tutorial::spawn_tutorial, player::spawn_player, ui::setup_ui))
         .add_systems(Update, (
             player::link_player_animations.run_if(in_state(GameState::Playing)),
             player::player_movement.run_if(in_state(GameState::Playing)),
@@ -53,6 +54,7 @@ fn main() {
         ))
         .add_systems(OnExit(GameState::Playing), (
             maze::cleanup_world,
+            tutorial::cleanup_tutorial,
             player::cleanup_player,
             ui::cleanup_ui,
             projectile::cleanup_projectiles,

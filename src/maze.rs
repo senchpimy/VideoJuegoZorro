@@ -38,7 +38,7 @@ pub struct WorldTerrain;
 pub struct WorldLight;
 
 const WORLD_SIZE: i32 = 80;
-pub const MAZE_OFFSET: Vec3 = Vec3::new(70.0, 0.0, 70.0);
+pub const MAZE_OFFSET: Vec3 = Vec3::new(70.0, 0.1, 70.0);
 
 pub fn terrain_height(_x: f32, _z: f32) -> f32 {
     0.0
@@ -268,12 +268,12 @@ fn spawn_maze_at(
             }
             if cell == 5 {
                 let patrol_points = vec![
-                    Vec3::new(pos.x - 3.0, 3.2, pos.z),
-                    Vec3::new(pos.x + 3.0, 3.2, pos.z),
+                    Vec3::new(pos.x - 3.0, 10.5, pos.z),
+                    Vec3::new(pos.x + 3.0, 10.5, pos.z),
                 ];
                 commands.spawn((
                     SceneRoot(asset_server.load("models/scorcher_enemy.glb#Scene0")),
-                    Transform::from_translation(Vec3::new(pos.x, 6., pos.z))
+                    Transform::from_translation(Vec3::new(pos.x, 12., pos.z))
                         .with_scale(Vec3::splat(0.012)),
                     Enemy {
                         speed: 1.5,
