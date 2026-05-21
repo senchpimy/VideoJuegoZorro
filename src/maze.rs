@@ -3,6 +3,7 @@ use crate::enemy::Enemy;
 use crate::platform::MovingPlatform;
 use crate::powerup::{Chest, PowerUpItem, PowerUpType};
 use bevy::prelude::*;
+use avian3d::prelude::{RigidBody, Collider};
 
 // 1 = Wall, 0 = Empty, 2 = Player Start, 3 = Moving Platform Pit (Removed), 4 = Lava Static Pit, 5 = Enemy Spawn, 6 = Chest, 7 = Speed Gem, 8 = Shield Gem, 9 = Healing Gem
 pub const MAZE_DATA: [[u8; 20]; 20] = [
@@ -179,6 +180,8 @@ fn spawn_maze_at(
                     MeshMaterial3d(wall_material.clone()),
                     Transform::from_xyz(pos.x, 2.0, pos.z),
                     Wall { half_size: Vec3::new(0.2, 2.0, 0.2) },
+                    RigidBody::Static,
+                    Collider::cuboid(0.4, 4.0, 0.4),
                     MazeElement,
                 ));
 
@@ -191,6 +194,8 @@ fn spawn_maze_at(
                         Transform::from_xyz(pos.x, 2.0, pos.z - 0.7)
                             .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
                         Wall { half_size: Vec3::new(0.2, 2.0, 0.5) },
+                        RigidBody::Static,
+                        Collider::cuboid(1.0, 4.0, 0.4),
                         MazeElement,
                     ));
                 }
@@ -202,6 +207,8 @@ fn spawn_maze_at(
                         Transform::from_xyz(pos.x, 2.0, pos.z + 0.7)
                             .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
                         Wall { half_size: Vec3::new(0.2, 2.0, 0.5) },
+                        RigidBody::Static,
+                        Collider::cuboid(1.0, 4.0, 0.4),
                         MazeElement,
                     ));
                 }
@@ -212,6 +219,8 @@ fn spawn_maze_at(
                         MeshMaterial3d(wall_material.clone()),
                         Transform::from_xyz(pos.x - 0.7, 2.0, pos.z),
                         Wall { half_size: Vec3::new(0.5, 2.0, 0.2) },
+                        RigidBody::Static,
+                        Collider::cuboid(1.0, 4.0, 0.4),
                         MazeElement,
                     ));
                 }
@@ -222,6 +231,8 @@ fn spawn_maze_at(
                         MeshMaterial3d(wall_material.clone()),
                         Transform::from_xyz(pos.x + 0.7, 2.0, pos.z),
                         Wall { half_size: Vec3::new(0.5, 2.0, 0.2) },
+                        RigidBody::Static,
+                        Collider::cuboid(1.0, 4.0, 0.4),
                         MazeElement,
                     ));
                 }

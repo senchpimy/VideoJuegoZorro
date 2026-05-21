@@ -9,7 +9,6 @@ pub struct TutorialElement;
 
 #[derive(Component)]
 pub struct PhysicsCube {
-    pub timer: Timer,
     pub is_held: bool,
 }
 
@@ -93,13 +92,7 @@ pub fn spawn_tutorial(
     spawn_room(&mut commands, &mut meshes, floor_material.clone(), wall_material.clone(), 
         room5_pos, "FISICAS\nCUBOS QUE CAEN", false, false, false, true);
     
-    // Static Floor for physics in Room 5
-    commands.spawn((
-        RigidBody::Static,
-        Collider::cuboid(20.0, 0.1, 20.0),
-        Transform::from_translation(room5_pos),
-        TutorialElement,
-    ));
+
 
     // Lights
     for pos in [TUTORIAL_OFFSET, room2_pos, room3_pos, room4_pos, room5_pos] {
@@ -122,39 +115,35 @@ pub fn spawn_physics_cubes(
     mut timer: ResMut<CubeSpawnTimer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    cube_query: Query<&PhysicsCube>,
 ) {
     if timer.0.tick(time.delta()).just_finished() {
-        let room5_pos = TUTORIAL_OFFSET + Vec3::new(20.0, 0.0, -60.0); // Room 5 is East of Room 4
-        
-        commands.spawn((
-            Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
-            MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
-            Transform::from_translation(room5_pos + Vec3::new(0.0, 8.0, 0.0)),
-            RigidBody::Dynamic,
-            Collider::cuboid(1.0, 1.0, 1.0),
-            PhysicsCube {
-                timer: Timer::from_seconds(5.0, TimerMode::Once),
-                is_held: false,
-            },
-            TutorialElement,
-        ));
+        let count = cube_query.iter().count();
+        if count < 3 {
+            let room5_pos = TUTORIAL_OFFSET + Vec3::new(20.0, 0.0, -60.0); // Room 5 is East of Room 4
+            
+            let offset = match count {
+                0 => Vec3::new(-1.5, 8.0, -1.5),
+                1 => Vec3::new(1.5, 8.0, 1.5),
+                _ => Vec3::new(0.0, 8.0, 0.0),
+            };
+
+            commands.spawn((
+                Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+                MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
+                Transform::from_translation(room5_pos + offset),
+                RigidBody::Dynamic,
+                Collider::cuboid(1.0, 1.0, 1.0),
+                PhysicsCube {
+                    is_held: false,
+                },
+                TutorialElement,
+            ));
+        }
     }
 }
 
-pub fn update_physics_cubes(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut query: Query<(Entity, &mut PhysicsCube)>,
-) {
-    for (entity, mut cube) in &mut query {
-        if cube.is_held {
-            continue;
-        }
-        if cube.timer.tick(time.delta()).just_finished() {
-            commands.entity(entity).despawn();
-        }
-    }
-}
+pub fn update_physics_cubes() {}
 
 fn spawn_room(
     commands: &mut Commands,
@@ -177,6 +166,8 @@ fn spawn_room(
         Mesh3d(meshes.add(Plane3d::default().mesh().size(size, size))),
         MeshMaterial3d(floor_mat),
         Transform::from_translation(pos),
+        RigidBody::Static,
+        Collider::cuboid(size, 0.1, size),
         TutorialElement,
     ));
 
@@ -229,6 +220,8 @@ fn spawn_wall(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>, mat: H
         MeshMaterial3d(mat),
         Transform::from_translation(pos),
         Wall { half_size: size / 2.0 },
+        RigidBody::Static,
+        Collider::cuboid(size.x, size.y, size.z),
         TutorialElement,
     ));
 }

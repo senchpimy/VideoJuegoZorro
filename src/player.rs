@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use crate::collision::{check_collision, Wall};
 use crate::maze::terrain_height;
 use crate::platform::MovingPlatform;
-use avian3d::prelude::{RigidBody, LinearVelocity, AngularVelocity};
+use avian3d::prelude::{RigidBody, Collider, LinearVelocity, AngularVelocity};
 use crate::tutorial::PhysicsCube;
 
 #[derive(Component)]
@@ -70,6 +70,8 @@ pub fn spawn_player(
             idle_node,
         },
         AnimationGraphHandle(graph_handle),
+        RigidBody::Kinematic,
+        Collider::cuboid(0.8, 1.8, 0.8),
     ));
 }
 
@@ -99,6 +101,44 @@ pub fn cleanup_player(mut commands: Commands, query: Query<Entity, With<Player>>
     }
 }
 
+fn can_move_cube(
+    cube_entity: Entity,
+    direction: Vec3,
+    cube_query: &Query<(Entity, &Transform, &PhysicsCube), Without<Player>>,
+    wall_query: &Query<(&Transform, &Wall), (With<Wall>, Without<Player>)>,
+) -> bool {
+    let Ok((_, cube_transform, _)) = cube_query.get(cube_entity) else {
+        return false;
+    };
+    let test_delta = direction * 0.2;
+    let next_pos = cube_transform.translation + test_delta;
+
+    // Check collision with walls
+    if check_collision(next_pos, 0.5, wall_query) {
+        return false;
+    }
+
+    // Check collision with other cubes
+    for (other_entity, other_transform, other_cube) in cube_query {
+        if other_entity == cube_entity || other_cube.is_held {
+            continue;
+        }
+        let other_pos = other_transform.translation;
+        let collision_x = (next_pos.x - other_pos.x).abs() < 1.0;
+        let collision_z = (next_pos.z - other_pos.z).abs() < 1.0;
+        let collision_y = (next_pos.y - other_pos.y).abs() < 1.0;
+
+        if collision_x && collision_z && collision_y {
+            // Recursively check if the other cube can move in the same direction
+            if !can_move_cube(other_entity, direction, cube_query, wall_query) {
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
 pub fn player_movement(
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -106,6 +146,8 @@ pub fn player_movement(
     mut anim_player_query: Query<(&mut AnimationPlayer, &mut AnimationTransitions)>,
     wall_query: Query<(&Transform, &Wall), (With<Wall>, Without<Player>)>,
     platform_query: Query<(&Transform, &MovingPlatform), Without<Player>>,
+    cube_query: Query<(Entity, &Transform, &PhysicsCube), Without<Player>>,
+    mut cube_velocity_query: Query<&mut LinearVelocity, With<PhysicsCube>>,
 ) {
     let dt = time.delta_secs();
     for (mut player_transform, mut player, anim, anim_link) in &mut player_query {
@@ -202,13 +244,83 @@ pub fn player_movement(
             let mut new_pos = player_transform.translation;
             let player_radius = 0.4;
             
-            let test_pos_x = Vec3::new(new_pos.x + direction.x * speed * dt, new_pos.y, new_pos.z);
+            let mut test_pos_x = Vec3::new(new_pos.x + direction.x * speed * dt, new_pos.y, new_pos.z);
             if !check_collision(test_pos_x, player_radius, &wall_query) {
+                let dir_x = Vec3::new(direction.x, 0.0, 0.0).normalize_or_zero();
+                if dir_x != Vec3::ZERO {
+                    // Check collision with physics cubes
+                    for (cube_entity, cube_transform, cube) in &cube_query {
+                        if cube.is_held {
+                            continue;
+                        }
+                        let cube_pos = cube_transform.translation;
+                        let dx = test_pos_x.x - cube_pos.x;
+                        let dz = test_pos_x.z - cube_pos.z;
+                        let dy = test_pos_x.y - cube_pos.y;
+                        
+                        let limit_x = player_radius + 0.5;
+                        let limit_z = player_radius + 0.5;
+                        let limit_y = 0.9 + 0.5;
+
+                        if dx.abs() < limit_x && dz.abs() < limit_z && dy.abs() < limit_y {
+                            // Check if this cube can move in dir_x
+                            let can_push = can_move_cube(cube_entity, dir_x, &cube_query, &wall_query);
+                            if !can_push {
+                                // Blocked! Stop the player completely (0.01 max penetration)
+                                let allowed_dist = limit_x - 0.01;
+                                if dx < 0.0 {
+                                    test_pos_x.x = cube_pos.x - allowed_dist;
+                                } else {
+                                    test_pos_x.x = cube_pos.x + allowed_dist;
+                                }
+                            } else {
+                                if let Ok(mut vel) = cube_velocity_query.get_mut(cube_entity) {
+                                    vel.x = dir_x.x * speed;
+                                }
+                            }
+                        }
+                    }
+                }
                 new_pos.x = test_pos_x.x;
             }
 
-            let test_pos_z = Vec3::new(new_pos.x, new_pos.y, new_pos.z + direction.z * speed * dt);
+            let mut test_pos_z = Vec3::new(new_pos.x, new_pos.y, new_pos.z + direction.z * speed * dt);
             if !check_collision(test_pos_z, player_radius, &wall_query) {
+                let dir_z = Vec3::new(0.0, 0.0, direction.z).normalize_or_zero();
+                if dir_z != Vec3::ZERO {
+                    // Check collision with physics cubes
+                    for (cube_entity, cube_transform, cube) in &cube_query {
+                        if cube.is_held {
+                            continue;
+                        }
+                        let cube_pos = cube_transform.translation;
+                        let dx = test_pos_z.x - cube_pos.x;
+                        let dz = test_pos_z.z - cube_pos.z;
+                        let dy = test_pos_z.y - cube_pos.y;
+
+                        let limit_x = player_radius + 0.5;
+                        let limit_z = player_radius + 0.5;
+                        let limit_y = 0.9 + 0.5;
+
+                        if dx.abs() < limit_x && dz.abs() < limit_z && dy.abs() < limit_y {
+                            // Check if this cube can move in dir_z
+                            let can_push = can_move_cube(cube_entity, dir_z, &cube_query, &wall_query);
+                            if !can_push {
+                                // Blocked! Stop the player completely (0.01 max penetration)
+                                let allowed_dist = limit_z - 0.01;
+                                if dz < 0.0 {
+                                    test_pos_z.z = cube_pos.z - allowed_dist;
+                                } else {
+                                    test_pos_z.z = cube_pos.z + allowed_dist;
+                                }
+                            } else {
+                                if let Ok(mut vel) = cube_velocity_query.get_mut(cube_entity) {
+                                    vel.z = dir_z.z * speed;
+                                }
+                            }
+                        }
+                    }
+                }
                 new_pos.z = test_pos_z.z;
             }
 
@@ -244,7 +356,6 @@ pub fn player_grab_block(
                 // Release the cube
                 if let Ok((_, _, mut cube)) = cube_query.get_mut(held_entity) {
                     cube.is_held = false;
-                    cube.timer.reset(); // Give it a fresh 5 seconds of life after being dropped
                     commands.entity(held_entity).insert((
                         RigidBody::Dynamic,
                         LinearVelocity::ZERO,
