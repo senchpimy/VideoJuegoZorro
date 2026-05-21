@@ -54,10 +54,9 @@ pub fn update_projectiles(
     mut commands: Commands,
     time: Res<Time>,
     mut projectile_query: Query<(Entity, &mut Transform, &mut Projectile)>,
-    wall_query: Query<&Transform, (With<Wall>, Without<Projectile>)>,
+    wall_query: Query<(&Transform, &Wall), (With<Wall>, Without<Projectile>)>,
 ) {
     let dt = time.delta_secs();
-    let wall_size = 0.4;
     let proj_radius = 0.3;
 
     for (entity, mut transform, mut projectile) in &mut projectile_query {
@@ -73,10 +72,10 @@ pub fn update_projectiles(
         // Collision with walls
         let pos = transform.translation;
         let mut hit = false;
-        for wall_transform in &wall_query {
+        for (wall_transform, wall) in &wall_query {
             let wall_pos = wall_transform.translation;
-            let collision_x = (pos.x - wall_pos.x).abs() < (proj_radius + wall_size);
-            let collision_z = (pos.z - wall_pos.z).abs() < (proj_radius + wall_size);
+            let collision_x = (pos.x - wall_pos.x).abs() < (proj_radius + wall.half_size.x);
+            let collision_z = (pos.z - wall_pos.z).abs() < (proj_radius + wall.half_size.z);
             let collision_y = pos.y >= 0.0 && pos.y <= 4.0;
 
             if collision_x && collision_z && collision_y {

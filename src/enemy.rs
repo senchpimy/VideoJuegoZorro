@@ -66,7 +66,7 @@ pub fn check_enemy_player_collision(
     mut player_query: Query<(&mut Transform, &mut Player), Without<Enemy>>,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    let player_radius = 0.6;
+    let player_radius = 0.4;
     let enemy_radius = 0.4;
     
     for (mut player_transform, mut player) in &mut player_query {

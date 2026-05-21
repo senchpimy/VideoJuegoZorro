@@ -37,8 +37,8 @@ pub struct WorldTerrain;
 #[derive(Component)]
 pub struct WorldLight;
 
-const WORLD_SIZE: i32 = 80; // Larger terrain for larger maze
-pub const MAZE_OFFSET: Vec3 = Vec3::new(70.0, 0.0, 70.0); // Repositioned
+const WORLD_SIZE: i32 = 80;
+pub const MAZE_OFFSET: Vec3 = Vec3::new(70.0, 0.0, 70.0);
 
 pub fn terrain_height(_x: f32, _z: f32) -> f32 {
     0.0
@@ -59,7 +59,7 @@ pub fn spawn_world(
         },
         WorldLight,
     ));
-    commands.insert_resource(ClearColor(Color::srgb(0.5, 0.7, 0.9))); // Sky Blue
+    commands.insert_resource(ClearColor(Color::srgb(0.5, 0.7, 0.9)));
 
     let ground_material = materials.add(Color::from(LinearRgba::from_f32_array([
         0.15, 0.25, 0.1, 1.0,
@@ -68,7 +68,6 @@ pub fn spawn_world(
         0.3, 0.3, 0.35, 1.0,
     ])));
 
-    // Spawn Terrain Grid
     for z in -WORLD_SIZE..WORLD_SIZE {
         for x in -WORLD_SIZE..WORLD_SIZE {
             let fx = x as f32 * 2.0;
@@ -90,7 +89,6 @@ pub fn spawn_world(
         }
     }
 
-    // Spawn Clues (Spirit Pillars) pointing to the maze
     let pillar_mesh = meshes.add(Cylinder::new(0.2, 4.0));
     let pillar_material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.0, 1.0, 1.0),
@@ -111,7 +109,6 @@ pub fn spawn_world(
             WorldTerrain,
         ));
 
-        // Point light at each pillar to make it visible from afar
         commands.spawn((
             PointLight {
                 color: Color::srgb(0.0, 1.0, 1.0),
@@ -124,7 +121,6 @@ pub fn spawn_world(
         ));
     }
 
-    // Light (Sun)
     commands.spawn((
         DirectionalLight {
             illuminance: 32000.0,
@@ -135,7 +131,6 @@ pub fn spawn_world(
         MazeElement,
     ));
 
-    // Spawn the Maze at the center
     spawn_maze_at(
         &mut commands,
         &mut meshes,
@@ -159,6 +154,10 @@ fn spawn_maze_at(
         0.1, 0.1, 0.1, 1.0,
     ])));
 
+    let pillar_mesh = meshes.add(Cuboid::new(0.4, 4.0, 0.4));
+    let connector_mesh = meshes.add(Cuboid::new(1.0, 4.0, 0.4)); // For East/West
+    // Note: for North/South we use the same mesh but rotate or swap dimensions
+
     for (z, row) in MAZE_DATA.iter().enumerate() {
         for (x, &cell) in row.iter().enumerate() {
             let pos = offset + Vec3::new(x as f32 * 2.0, 0.0, z as f32 * 2.0);
@@ -174,17 +173,62 @@ fn spawn_maze_at(
             }
 
             if cell == 1 {
+                // Central Pillar
                 commands.spawn((
-                    Mesh3d(meshes.add(Cuboid::new(0.5, 2.0, 0.5))),
+                    Mesh3d(pillar_mesh.clone()),
                     MeshMaterial3d(wall_material.clone()),
-                    Transform::from_xyz(pos.x, 1.0, pos.z),
-                    Wall,
+                    Transform::from_xyz(pos.x, 2.0, pos.z),
+                    Wall { half_size: Vec3::new(0.2, 2.0, 0.2) },
                     MazeElement,
                 ));
+
+                // Check neighbors for connectors
+                // North (z-1)
+                if z > 0 && MAZE_DATA[z-1][x] == 1 {
+                    commands.spawn((
+                        Mesh3d(connector_mesh.clone()),
+                        MeshMaterial3d(wall_material.clone()),
+                        Transform::from_xyz(pos.x, 2.0, pos.z - 0.7)
+                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                        Wall { half_size: Vec3::new(0.2, 2.0, 0.5) },
+                        MazeElement,
+                    ));
+                }
+                // South (z+1)
+                if z < 19 && MAZE_DATA[z+1][x] == 1 {
+                    commands.spawn((
+                        Mesh3d(connector_mesh.clone()),
+                        MeshMaterial3d(wall_material.clone()),
+                        Transform::from_xyz(pos.x, 2.0, pos.z + 0.7)
+                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                        Wall { half_size: Vec3::new(0.2, 2.0, 0.5) },
+                        MazeElement,
+                    ));
+                }
+                // West (x-1)
+                if x > 0 && MAZE_DATA[z][x-1] == 1 {
+                    commands.spawn((
+                        Mesh3d(connector_mesh.clone()),
+                        MeshMaterial3d(wall_material.clone()),
+                        Transform::from_xyz(pos.x - 0.7, 2.0, pos.z),
+                        Wall { half_size: Vec3::new(0.5, 2.0, 0.2) },
+                        MazeElement,
+                    ));
+                }
+                // East (x+1)
+                if x < 19 && MAZE_DATA[z][x+1] == 1 {
+                    commands.spawn((
+                        Mesh3d(connector_mesh.clone()),
+                        MeshMaterial3d(wall_material.clone()),
+                        Transform::from_xyz(pos.x + 0.7, 2.0, pos.z),
+                        Wall { half_size: Vec3::new(0.5, 2.0, 0.2) },
+                        MazeElement,
+                    ));
+                }
             }
 
-            // Moving Platform Logic (Preserved but currently unused by MAZE_DATA)
             if cell == 3 {
+                // Preserved logic
                 let platform_mesh = meshes.add(Cuboid::new(2.0, 0.3, 2.0));
                 let platform_material = materials.add(StandardMaterial {
                     base_color: Color::srgb(0.0, 0.8, 1.0),
@@ -205,18 +249,6 @@ fn spawn_maze_at(
                         forward: true,
                         delta: Vec3::ZERO,
                     },
-                    MazeElement,
-                ));
-                let lava_mesh = meshes.add(Plane3d::default().mesh().size(2.0, 2.0));
-                let lava_material = materials.add(StandardMaterial {
-                    base_color: Color::srgb(0.8, 0.1, 0.0),
-                    emissive: LinearRgba::from_f32_array([0.6, 0.05, 0.0, 1.0]),
-                    ..default()
-                });
-                commands.spawn((
-                    Mesh3d(lava_mesh),
-                    MeshMaterial3d(lava_material),
-                    Transform::from_xyz(pos.x, -2.0, pos.z),
                     MazeElement,
                 ));
             }
@@ -273,11 +305,6 @@ fn spawn_maze_at(
                     8 => (Color::srgb(1.0, 0.8, 0.0), PowerUpType::Shield),
                     _ => (Color::srgb(0.0, 1.0, 0.2), PowerUpType::Healing),
                 };
-                let emissive = match cell {
-                    7 => [0.0, 1.2, 2.0, 1.0],
-                    8 => [2.0, 1.6, 0.0, 1.0],
-                    _ => [0.0, 2.0, 0.4, 1.0],
-                };
                 if cell == 7 {
                     commands.spawn((
                         SceneRoot(asset_server.load("models/banana.glb#Scene0")),
@@ -302,7 +329,11 @@ fn spawn_maze_at(
                     let gem_mesh = meshes.add(Sphere::new(0.36).mesh());
                     let gem_material = materials.add(StandardMaterial {
                         base_color: color,
-                        emissive: LinearRgba::from_f32_array(emissive),
+                        emissive: LinearRgba::from_f32_array(match cell {
+                            7 => [0.0, 1.2, 2.0, 1.0],
+                            8 => [2.0, 1.6, 0.0, 1.0],
+                            _ => [0.0, 2.0, 0.4, 1.0],
+                        }),
                         ..default()
                     });
                     commands.spawn((
@@ -335,6 +366,5 @@ pub fn cleanup_world(
     for e in q_light.iter() {
         commands.entity(e).despawn();
     }
-
     commands.insert_resource(ClearColor::default());
 }

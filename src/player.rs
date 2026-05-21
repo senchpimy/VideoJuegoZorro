@@ -107,7 +107,7 @@ pub fn player_movement(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut player_query: Query<(&mut Transform, &mut Player, &PlayerAnimation, Option<&AnimationPlayerLink>)>,
     mut anim_player_query: Query<(&mut AnimationPlayer, &mut AnimationTransitions)>,
-    wall_query: Query<&Transform, (With<Wall>, Without<Player>)>,
+    wall_query: Query<(&Transform, &Wall), (With<Wall>, Without<Player>)>,
     platform_query: Query<(&Transform, &MovingPlatform), Without<Player>>,
 ) {
     let dt = time.delta_secs();
@@ -203,7 +203,7 @@ pub fn player_movement(
             player_transform.rotation = player_transform.rotation.slerp(target_rotation, 0.2);
 
             let mut new_pos = player_transform.translation;
-            let player_radius = 0.6;
+            let player_radius = 0.4;
             
             let test_pos_x = Vec3::new(new_pos.x + direction.x * speed * dt, new_pos.y, new_pos.z);
             if !check_collision(test_pos_x, player_radius, &wall_query) {
