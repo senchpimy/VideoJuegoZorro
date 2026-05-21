@@ -43,7 +43,7 @@ pub fn camera_follow(
             let rotation = Quat::from_euler(EulerRot::YXZ, camera_data.yaw, camera_data.pitch, 0.0);
             let offset = rotation * Vec3::new(0.0, 0.0, distance);
             let target = player_transform.translation + offset;
-            camera_transform.translation = camera_transform.translation.lerp(target, 0.1);
+            camera_transform.translation = camera_transform.translation.lerp(target, 0.4);
             camera_transform.look_at(player_transform.translation, Vec3::Y);
         }
     }

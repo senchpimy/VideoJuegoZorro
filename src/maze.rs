@@ -4,23 +4,28 @@ use crate::platform::MovingPlatform;
 use crate::powerup::{Chest, PowerUpItem, PowerUpType};
 use bevy::prelude::*;
 
-// 1 = Wall, 0 = Empty, 2 = Player Start, 3 = Moving Platform Pit, 4 = Lava Static Pit, 5 = Enemy Spawn, 6 = Chest, 7 = Speed Gem, 8 = Shield Gem, 9 = Healing Gem
-pub const MAZE_DATA: [[u8; 15]; 15] = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 9, 1],
-    [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1],
-    [1, 0, 4, 0, 3, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-    [1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1],
-    [1, 0, 1, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-    [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 7, 1],
-    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1],
-    [1, 0, 0, 5, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
-    [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 6, 1],
-    [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 5, 0, 0, 8, 0, 0, 5, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+// 1 = Wall, 0 = Empty, 2 = Player Start, 3 = Moving Platform Pit (Removed), 4 = Lava Static Pit, 5 = Enemy Spawn, 6 = Chest, 7 = Speed Gem, 8 = Shield Gem, 9 = Healing Gem
+pub const MAZE_DATA: [[u8; 20]; 20] = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 7, 0, 0, 0, 0, 9, 1],
+    [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1],
+    [1, 0, 4, 0, 0, 0, 1, 8, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1],
+    [1, 0, 1, 0, 9, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 7, 0, 0, 1],
+    [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 1, 0, 7, 0, 0, 0, 0, 0, 1, 7, 1, 0, 0, 0, 0, 1],
+    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1],
+    [1, 0, 8, 5, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9, 1],
+    [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9, 0, 0, 6, 1, 0, 7, 0, 0, 1],
+    [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1],
+    [1, 7, 0, 0, 5, 0, 0, 8, 0, 0, 5, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1],
+    [1, 0, 8, 0, 0, 9, 0, 0, 0, 5, 0, 0, 0, 7, 0, 0, 0, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 7, 0, 0, 0, 1, 0, 1, 0, 0, 0, 8, 0, 0, 0, 0, 1],
+    [1, 9, 0, 5, 0, 0, 7, 0, 0, 0, 0, 0, 5, 0, 0, 8, 0, 0, 9, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
 
 #[derive(Component)]
@@ -32,8 +37,8 @@ pub struct WorldTerrain;
 #[derive(Component)]
 pub struct WorldLight;
 
-const WORLD_SIZE: i32 = 60; // 60x60 grid
-pub const MAZE_OFFSET: Vec3 = Vec3::new(60.0, 0.0, 60.0); // Maze at the center of the world
+const WORLD_SIZE: i32 = 80; // Larger terrain for larger maze
+pub const MAZE_OFFSET: Vec3 = Vec3::new(70.0, 0.0, 70.0); // Repositioned
 
 pub fn terrain_height(_x: f32, _z: f32) -> f32 {
     0.0
@@ -95,7 +100,7 @@ pub fn spawn_world(
 
     for i in 0..8 {
         let angle = i as f32 * std::f32::consts::PI / 4.0;
-        let dist = 40.0;
+        let dist = 60.0;
         let pos = MAZE_OFFSET + Vec3::new(angle.cos() * dist, 0.0, angle.sin() * dist);
         let h = terrain_height(pos.x, pos.z);
 
@@ -178,6 +183,7 @@ fn spawn_maze_at(
                 ));
             }
 
+            // Moving Platform Logic (Preserved but currently unused by MAZE_DATA)
             if cell == 3 {
                 let platform_mesh = meshes.add(Cuboid::new(2.0, 0.3, 2.0));
                 let platform_material = materials.add(StandardMaterial {
