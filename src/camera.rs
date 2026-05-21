@@ -20,6 +20,10 @@ impl Default for MainCamera {
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
+        Camera {
+            order: 0,
+            ..default()
+        },
         Transform::from_xyz(7.0, 15.0, 20.0).looking_at(Vec3::new(7.0, 0.0, 7.0), Vec3::Y),
         MainCamera::default(),
     ));

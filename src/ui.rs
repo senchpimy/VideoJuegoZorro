@@ -14,6 +14,16 @@ pub struct PowerUpText;
 pub struct GameUi;
 
 pub fn setup_ui(mut commands: Commands) {
+    // 2D Camera for UI with higher order
+    commands.spawn((
+        Camera2d::default(),
+        Camera {
+            order: 1,
+            ..default()
+        },
+        GameUi,
+    ));
+
     // Parent container for top-left UI
     commands.spawn((
         Node {
@@ -25,24 +35,21 @@ pub fn setup_ui(mut commands: Commands) {
             row_gap: Val::Px(12.0),
             ..default()
         },
+        BackgroundColor(Color::BLACK.with_alpha(0.8)),
         GameUi,
-    ))
-    .insert(BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.4)))
-    .with_children(|parent| {
+        GlobalZIndex(10),
+    )).with_children(|parent| {
         // Health UI (Bar)
-        parent.spawn((
-            Node {
-                flex_direction: FlexDirection::Row,
-                align_items: AlignItems::Center,
-                column_gap: Val::Px(12.0),
-                ..default()
-            },
-        )).with_children(|health_parent| {
+        parent.spawn(Node {
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            column_gap: Val::Px(12.0),
+            ..default()
+        }).with_children(|health_parent| {
             health_parent.spawn((
                 Text::new("VIDA"),
                 TextFont { font_size: 22.0, ..default() },
                 TextColor(Color::srgb(1.0, 0.3, 0.3)),
-                Node::default(),
             ));
             
             // Health Bar Background
@@ -52,9 +59,8 @@ pub fn setup_ui(mut commands: Commands) {
                     height: Val::Px(22.0),
                     ..default()
                 },
-            ))
-            .insert(BackgroundColor(Color::srgb(0.1, 0.1, 0.1)))
-            .with_children(|bar_bg| {
+                BackgroundColor(Color::srgb(0.1, 0.1, 0.1)),
+            )).with_children(|bar_bg| {
                 // Health Bar Foreground
                 bar_bg.spawn((
                     Node {
@@ -62,9 +68,9 @@ pub fn setup_ui(mut commands: Commands) {
                         height: Val::Percent(100.0),
                         ..default()
                     },
+                    BackgroundColor(Color::srgb(1.0, 0.1, 0.1)),
                     HealthBar,
-                ))
-                .insert(BackgroundColor(Color::srgb(1.0, 0.1, 0.1)));
+                ));
             });
         });
 
@@ -73,7 +79,6 @@ pub fn setup_ui(mut commands: Commands) {
             Text::new("PUNTOS: 0"),
             TextFont { font_size: 24.0, ..default() },
             TextColor(Color::srgb(1.0, 0.84, 0.0)),
-            Node::default(),
             ScoreText,
         ));
 
@@ -82,7 +87,6 @@ pub fn setup_ui(mut commands: Commands) {
             Text::new(""),
             TextFont { font_size: 20.0, ..default() },
             TextColor(Color::srgb(0.0, 0.8, 1.0)),
-            Node::default(),
             PowerUpText,
         ));
     });
