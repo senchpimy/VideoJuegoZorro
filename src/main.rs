@@ -13,6 +13,7 @@ mod tutorial;
 
 use bevy::prelude::*;
 use bevy::app::AppExit;
+use avian3d::prelude::*;
 
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
 pub enum GameState {
@@ -25,6 +26,7 @@ pub enum GameState {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(PhysicsPlugins::default())
         .init_state::<GameState>()
         // Global Startup
         .add_systems(Startup, camera::spawn_camera)
@@ -48,6 +50,8 @@ fn main() {
             powerup::animate_items.run_if(in_state(GameState::Playing)),
             powerup::check_powerup_collisions.run_if(in_state(GameState::Playing)),
             powerup::check_chest_interactions.run_if(in_state(GameState::Playing)),
+            tutorial::spawn_physics_cubes.run_if(in_state(GameState::Playing)),
+            tutorial::update_physics_cubes.run_if(in_state(GameState::Playing)),
             ui::update_ui.run_if(in_state(GameState::Playing)),
             camera::camera_follow.run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
             toggle_pause.run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
