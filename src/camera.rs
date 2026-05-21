@@ -26,7 +26,7 @@ pub fn spawn_camera(mut commands: Commands) {
 }
 
 pub fn camera_follow(
-    mut motion_evr: MessageReader<MouseMotion>, // ← EventReader → MessageReader
+    mut motion_evr: MessageReader<MouseMotion>,
     player_query: Query<&Transform, (With<Player>, Without<MainCamera>)>,
     mut camera_query: Query<(&mut Transform, &mut MainCamera)>,
 ) {

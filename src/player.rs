@@ -36,6 +36,9 @@ pub struct PlayerAnimation {
     pub idle_node: AnimationNodeIndex,
 }
 
+#[derive(Component)]
+pub struct AnimationPlayerLink(pub Entity);
+
 pub fn spawn_player(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -63,8 +66,27 @@ pub fn spawn_player(
             idle_node,
         },
         AnimationGraphHandle(graph_handle),
-        AnimationTransitions::default(),
     ));
+}
+
+pub fn link_player_animations(
+    mut commands: Commands,
+    player_query: Query<(Entity, &AnimationGraphHandle), (With<Player>, Without<AnimationPlayerLink>)>,
+    children_query: Query<&Children>,
+    anim_player_query: Query<Entity, With<AnimationPlayer>>,
+) {
+    for (player_entity, graph_handle) in &player_query {
+        for descendant in children_query.iter_descendants(player_entity) {
+            if anim_player_query.get(descendant).is_ok() {
+                commands.entity(descendant).insert((
+                    graph_handle.clone(),
+                    AnimationTransitions::default(),
+                ));
+                commands.entity(player_entity).insert(AnimationPlayerLink(descendant));
+                break;
+            }
+        }
+    }
 }
 
 pub fn cleanup_player(mut commands: Commands, query: Query<Entity, With<Player>>) {
@@ -76,14 +98,13 @@ pub fn cleanup_player(mut commands: Commands, query: Query<Entity, With<Player>>
 pub fn player_movement(
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(&mut Transform, &mut Player, &PlayerAnimation, Entity)>,
+    mut player_query: Query<(&mut Transform, &mut Player, &PlayerAnimation, Option<&AnimationPlayerLink>)>,
     mut anim_player_query: Query<(&mut AnimationPlayer, &mut AnimationTransitions)>,
-    children_query: Query<&Children>,
     wall_query: Query<&Transform, (With<Wall>, Without<Player>)>,
     platform_query: Query<(&Transform, &MovingPlatform), Without<Player>>,
 ) {
     let dt = time.delta_secs();
-    for (mut player_transform, mut player, anim, entity) in &mut player_query {
+    for (mut player_transform, mut player, anim, anim_link) in &mut player_query {
         if player.invulnerable_timer > 0.0 {
             player.invulnerable_timer -= dt;
         }
@@ -168,24 +189,6 @@ pub fn player_movement(
             player_transform.translation.y += 0.1;
         }
 
-        // Find AnimationPlayer Entity
-        let mut anim_player_entity = if anim_player_query.get(entity).is_ok() {
-            Some(entity)
-        } else {
-            None
-        };
-
-        if anim_player_entity.is_none() {
-            if let Ok(children) = children_query.get(entity) {
-                for child in children.iter() {
-                    if anim_player_query.get(child).is_ok() {
-                        anim_player_entity = Some(child);
-                        break;
-                    }
-                }
-            }
-        }
-
         if direction != Vec3::ZERO {
             direction = direction.normalize();
             
@@ -207,14 +210,14 @@ pub fn player_movement(
 
             player_transform.translation = new_pos;
             
-            if let Some(anim_entity) = anim_player_entity {
-                if let Ok((mut anim_player, mut transitions)) = anim_player_query.get_mut(anim_entity) {
+            if let Some(link) = anim_link {
+                if let Ok((mut anim_player, mut transitions)) = anim_player_query.get_mut(link.0) {
                     transitions.play(&mut anim_player, anim.walk_node, std::time::Duration::from_millis(200)).repeat();
                 }
             }
         } else {
-            if let Some(anim_entity) = anim_player_entity {
-                if let Ok((mut anim_player, mut transitions)) = anim_player_query.get_mut(anim_entity) {
+            if let Some(link) = anim_link {
+                if let Ok((mut anim_player, mut transitions)) = anim_player_query.get_mut(link.0) {
                     transitions.play(&mut anim_player, anim.idle_node, std::time::Duration::from_millis(200)).repeat();
                 }
             }
