@@ -10,6 +10,9 @@ pub struct ScoreText;
 #[derive(Component)]
 pub struct PowerUpText;
 
+#[derive(Component)]
+pub struct GameUi;
+
 pub fn setup_ui(mut commands: Commands) {
     // Parent container for top-left UI
     commands.spawn((
@@ -21,6 +24,7 @@ pub fn setup_ui(mut commands: Commands) {
             row_gap: Val::Px(8.0),
             ..default()
         },
+        GameUi,
     )).with_children(|parent| {
         // Health UI
         parent.spawn((
@@ -57,6 +61,12 @@ pub fn setup_ui(mut commands: Commands) {
             }
         ));
     });
+}
+
+pub fn cleanup_ui(mut commands: Commands, query: Query<Entity, With<GameUi>>) {
+    for entity in &query {
+        commands.entity(entity).despawn();
+    }
 }
 
 pub fn update_ui(

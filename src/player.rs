@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use crate::collision::{check_collision, Wall};
-use crate::maze::MAZE_DATA;
+use crate::maze::terrain_height;
 use crate::platform::MovingPlatform;
 
 #[derive(Component)]
@@ -41,31 +41,16 @@ pub fn spawn_player(
     asset_server: Res<AssetServer>,
     mut graphs: ResMut<Assets<AnimationGraph>>,
 ) {
-    // Find start position
-    let mut start_pos = Vec3::ZERO;
-    for (z, row) in MAZE_DATA.iter().enumerate() {
-        for (x, &cell) in row.iter().enumerate() {
-            if cell == 2 {
-                start_pos = Vec3::new(x as f32, 0.0, z as f32);
-            }
-        }
-    }
+    // Start player at the edge of the world, far from the maze
+    let start_pos = Vec3::new(0.0, terrain_height(0.0, 0.0) + 1.0, 0.0);
 
     // Load animations
     let walk_anim = asset_server.load(GltfAssetLabel::Animation(1).from_asset("models/fox.glb"));
     let idle_anim = asset_server.load(GltfAssetLabel::Animation(0).from_asset("models/fox.glb"));
     
     let mut graph = AnimationGraph::new();
-    // In Bevy 0.18, add_clip might take (handle, weight, mask) or similar. 
-    // The search said add_clip(handle, weight, mask).
     let idle_node = graph.add_clip(idle_anim, 1.0, graph.root); 
-    // Wait, the search said graph.root is the target? No, it said add_clip(handle, 1.0, None) and then set_root.
-    // Let's try to add nodes and connect them or just set one as root.
-    // If I want to switch, I can use a blend node.
-    
     let walk_node = graph.add_clip(walk_anim, 1.0, graph.root);
-    // Actually, I'll just add them to the graph and use AnimationPlayer to play them.
-    // In 0.18, AnimationPlayer::play(node_index) works if they are in the graph.
     
     let graph_handle = graphs.add(graph);
 
@@ -78,14 +63,21 @@ pub fn spawn_player(
             idle_node,
         },
         AnimationGraphHandle(graph_handle),
+        AnimationTransitions::default(),
     ));
+}
+
+pub fn cleanup_player(mut commands: Commands, query: Query<Entity, With<Player>>) {
+    for entity in &query {
+        commands.entity(entity).despawn();
+    }
 }
 
 pub fn player_movement(
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut player_query: Query<(&mut Transform, &mut Player, &PlayerAnimation, Entity)>,
-    mut anim_player_query: Query<&mut AnimationPlayer>,
+    mut anim_player_query: Query<(&mut AnimationPlayer, &mut AnimationTransitions)>,
     children_query: Query<&Children>,
     wall_query: Query<&Transform, (With<Wall>, Without<Player>)>,
     platform_query: Query<(&Transform, &MovingPlatform), Without<Player>>,
@@ -102,12 +94,13 @@ pub fn player_movement(
             player.shield_timer -= dt;
         }
 
-        if player_transform.translation.y < -1.8 {
+        // Falling off the world (though with terrain it's harder)
+        if player_transform.translation.y < -10.0 {
             if player.health > 0 {
                 player.health -= 1;
             }
             player.invulnerable_timer = 1.5;
-            player_transform.translation = Vec3::new(1.0, 1.0, 1.0);
+            player_transform.translation = Vec3::new(0.0, 10.0, 0.0); 
             player.velocity_y = 0.0;
         }
 
@@ -118,10 +111,15 @@ pub fn player_movement(
         if keyboard_input.pressed(KeyCode::KeyA) { direction.x -= 1.0; }
         if keyboard_input.pressed(KeyCode::KeyD) { direction.x += 1.0; }
 
-        let mut speed = 4.0;
+        let mut speed = 8.0;
         if player.speed_boost_timer > 0.0 {
-            speed = 8.0;
+            speed = 16.0;
         }
+
+        // Check terrain height at current position
+        let current_x = player_transform.translation.x;
+        let current_z = player_transform.translation.z;
+        let floor_h = terrain_height(current_x, current_z);
 
         // Check if player is on a moving platform
         let mut on_platform = false;
@@ -133,12 +131,12 @@ pub fn player_movement(
             let dx = (player_pos.x - plat_pos.x).abs();
             let dz = (player_pos.z - plat_pos.z).abs();
 
-            if dx < 0.7 && dz < 0.7 {
+            if dx < 1.4 && dz < 1.4 {
                 let dy = player_pos.y - plat_pos.y;
-                if dy >= -0.05 && dy <= 0.25 {
+                if dy >= -0.1 && dy <= 0.5 {
                     on_platform = true;
                     platform_delta = plat.delta;
-                    player_transform.translation.y = plat_pos.y + 0.1;
+                    player_transform.translation.y = plat_pos.y + 0.15;
                     break;
                 }
             }
@@ -148,8 +146,8 @@ pub fn player_movement(
             player.is_grounded = true;
             player.velocity_y = 0.0;
             player_transform.translation += platform_delta;
-        } else if player_transform.translation.y <= 0.0 {
-            player_transform.translation.y = 0.0;
+        } else if player_transform.translation.y <= floor_h {
+            player_transform.translation.y = floor_h;
             player.is_grounded = true;
             player.velocity_y = 0.0;
         } else {
@@ -157,17 +155,17 @@ pub fn player_movement(
             player.velocity_y -= 19.8 * dt;
             player_transform.translation.y += player.velocity_y * dt;
 
-            if player_transform.translation.y < 0.0 {
-                player_transform.translation.y = 0.0;
+            if player_transform.translation.y < floor_h {
+                player_transform.translation.y = floor_h;
                 player.is_grounded = true;
                 player.velocity_y = 0.0;
             }
         }
 
         if keyboard_input.just_pressed(KeyCode::Space) && player.is_grounded {
-            player.velocity_y = 7.0;
+            player.velocity_y = 10.0;
             player.is_grounded = false;
-            player_transform.translation.y += 0.05;
+            player_transform.translation.y += 0.1;
         }
 
         // Find AnimationPlayer Entity
@@ -188,8 +186,6 @@ pub fn player_movement(
             }
         }
 
-        let maybe_anim_player = anim_player_entity.and_then(|e| anim_player_query.get_mut(e).ok());
-
         if direction != Vec3::ZERO {
             direction = direction.normalize();
             
@@ -197,7 +193,7 @@ pub fn player_movement(
             player_transform.rotation = player_transform.rotation.slerp(target_rotation, 0.2);
 
             let mut new_pos = player_transform.translation;
-            let player_radius = 0.3;
+            let player_radius = 0.6;
             
             let test_pos_x = Vec3::new(new_pos.x + direction.x * speed * dt, new_pos.y, new_pos.z);
             if !check_collision(test_pos_x, player_radius, &wall_query) {
@@ -211,12 +207,16 @@ pub fn player_movement(
 
             player_transform.translation = new_pos;
             
-            if let Some(mut anim_player) = maybe_anim_player {
-                anim_player.play(anim.walk_node).repeat();
+            if let Some(anim_entity) = anim_player_entity {
+                if let Ok((mut anim_player, mut transitions)) = anim_player_query.get_mut(anim_entity) {
+                    transitions.play(&mut anim_player, anim.walk_node, std::time::Duration::from_millis(200)).repeat();
+                }
             }
         } else {
-            if let Some(mut anim_player) = maybe_anim_player {
-                anim_player.play(anim.idle_node).repeat();
+            if let Some(anim_entity) = anim_player_entity {
+                if let Ok((mut anim_player, mut transitions)) = anim_player_query.get_mut(anim_entity) {
+                    transitions.play(&mut anim_player, anim.idle_node, std::time::Duration::from_millis(200)).repeat();
+                }
             }
         }
     }

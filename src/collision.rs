@@ -8,7 +8,7 @@ pub fn check_collision(
     player_radius: f32,
     wall_query: &Query<&Transform, (With<Wall>, Without<super::player::Player>)>
 ) -> bool {
-    let wall_size = 0.5;
+    let wall_size = 1.0;
 
     for wall_transform in wall_query {
         let wall_pos = wall_transform.translation;

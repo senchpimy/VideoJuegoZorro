@@ -18,7 +18,7 @@ pub fn camera_follow(
 ) {
     for player_transform in &player_query {
         for mut camera_transform in &mut camera_query {
-            let target = player_transform.translation + Vec3::new(0.0, 8.0, 6.0);
+            let target = player_transform.translation + Vec3::new(0.0, 16.0, 12.0);
             camera_transform.translation = camera_transform.translation.lerp(target, 0.1);
             camera_transform.look_at(player_transform.translation, Vec3::Y);
         }

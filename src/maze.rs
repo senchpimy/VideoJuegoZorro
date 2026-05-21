@@ -1,72 +1,209 @@
-use bevy::prelude::*;
 use crate::collision::Wall;
-use crate::platform::MovingPlatform;
 use crate::enemy::Enemy;
-use crate::powerup::{PowerUpItem, PowerUpType, Chest};
+use crate::platform::MovingPlatform;
+use crate::powerup::{Chest, PowerUpItem, PowerUpType};
+use bevy::prelude::*;
 
 // 1 = Wall, 0 = Empty, 2 = Player Start, 3 = Moving Platform Pit, 4 = Lava Static Pit, 5 = Enemy Spawn, 6 = Chest, 7 = Speed Gem, 8 = Shield Gem, 9 = Healing Gem
 pub const MAZE_DATA: [[u8; 15]; 15] = [
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,2,0,0,1,0,0,0,0,0,1,0,0,9,1],
-    [1,1,1,0,1,0,1,1,1,0,1,0,1,0,1],
-    [1,0,4,0,3,0,1,0,0,0,0,0,1,0,1],
-    [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
-    [1,0,1,0,3,0,0,0,1,0,0,0,0,0,1],
-    [1,0,1,0,1,1,1,1,1,0,1,1,1,0,1],
-    [1,0,0,0,1,0,0,0,0,0,0,0,1,7,1],
-    [1,1,1,0,1,1,1,0,1,1,1,0,1,0,1],
-    [1,0,0,5,0,0,1,0,1,0,0,0,1,0,1],
-    [1,0,1,1,1,0,1,0,1,0,1,1,1,0,1],
-    [1,0,0,0,1,0,0,0,1,0,0,0,0,6,1],
-    [1,1,1,0,1,1,1,1,1,1,1,1,1,0,1],
-    [1,0,0,0,5,0,0,8,0,0,5,0,0,0,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 9, 1],
+    [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1],
+    [1, 0, 4, 0, 3, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1],
+    [1, 0, 1, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 7, 1],
+    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1],
+    [1, 0, 0, 5, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 6, 1],
+    [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 5, 0, 0, 8, 0, 0, 5, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
 
-pub fn spawn_maze(
+#[derive(Component)]
+pub struct MazeElement;
+
+#[derive(Component)]
+pub struct WorldTerrain;
+
+#[derive(Component)]
+pub struct WorldLight;
+
+const WORLD_SIZE: i32 = 60; // 60x60 grid
+pub const MAZE_OFFSET: Vec3 = Vec3::new(60.0, 0.0, 60.0); // Maze at the center of the world
+
+pub fn terrain_height(x: f32, z: f32) -> f32 {
+    let dist_from_center = Vec2::new(x - MAZE_OFFSET.x, z - MAZE_OFFSET.z).length();
+
+    // Smooth hills using sine waves
+    let hills = (x * 0.15).sin() * (z * 0.15).cos() * 1.5;
+
+    // Mountains at the edges
+    let boundary = 50.0;
+    let mut mountain = 0.0;
+    if dist_from_center > boundary {
+        mountain = (dist_from_center - boundary).powf(1.8) * 0.5;
+    }
+
+    // Flatten the maze area
+    let maze_radius = 20.0;
+    let t = (dist_from_center / maze_radius).min(1.0);
+    let smooth_t = t * t * (3.0 - 2.0 * t); // Smoothstep
+
+    (hills + mountain) * smooth_t
+}
+
+pub fn spawn_world(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
-    let wall_mesh = meshes.add(Cuboid::new(1.0, 2.0, 1.0));
-    let wall_material = materials.add(Color::from(LinearRgba::from_f32_array([0.4, 0.4, 0.4, 1.0])));
-    let ground_material = materials.add(Color::from(LinearRgba::from_f32_array([0.1, 0.1, 0.1, 1.0])));
+    // Daylight Settings
+    commands.spawn((
+        AmbientLight {
+            color: Color::WHITE,
+            brightness: 1000.0,
+            affects_lightmapped_meshes: true,
+        },
+        WorldLight,
+    ));
+    commands.insert_resource(ClearColor(Color::srgb(0.5, 0.7, 0.9))); // Sky Blue
+
+    let ground_material = materials.add(Color::from(LinearRgba::from_f32_array([
+        0.15, 0.25, 0.1, 1.0,
+    ])));
+    let mountain_material = materials.add(Color::from(LinearRgba::from_f32_array([
+        0.3, 0.3, 0.35, 1.0,
+    ])));
+
+    // Spawn Terrain Grid
+    for z in -WORLD_SIZE..WORLD_SIZE {
+        for x in -WORLD_SIZE..WORLD_SIZE {
+            let fx = x as f32 * 2.0;
+            let fz = z as f32 * 2.0;
+            let h = terrain_height(fx, fz);
+
+            let mat = if h > 8.0 {
+                mountain_material.clone()
+            } else {
+                ground_material.clone()
+            };
+
+            commands.spawn((
+                Mesh3d(meshes.add(Plane3d::default().mesh().size(2.0, 2.0))),
+                MeshMaterial3d(mat),
+                Transform::from_xyz(fx, h, fz),
+                WorldTerrain,
+            ));
+        }
+    }
+
+    // Spawn Clues (Spirit Pillars) pointing to the maze
+    let pillar_mesh = meshes.add(Cylinder::new(0.2, 4.0));
+    let pillar_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.0, 1.0, 1.0),
+        emissive: LinearRgba::from_f32_array([0.0, 5.0, 5.0, 1.0]),
+        ..default()
+    });
+
+    for i in 0..8 {
+        let angle = i as f32 * std::f32::consts::PI / 4.0;
+        let dist = 40.0;
+        let pos = MAZE_OFFSET + Vec3::new(angle.cos() * dist, 0.0, angle.sin() * dist);
+        let h = terrain_height(pos.x, pos.z);
+
+        commands.spawn((
+            Mesh3d(pillar_mesh.clone()),
+            MeshMaterial3d(pillar_material.clone()),
+            Transform::from_xyz(pos.x, h + 2.0, pos.z),
+            WorldTerrain,
+        ));
+
+        // Point light at each pillar to make it visible from afar
+        commands.spawn((
+            PointLight {
+                color: Color::srgb(0.0, 1.0, 1.0),
+                intensity: 100000.0,
+                range: 50.0,
+                ..default()
+            },
+            Transform::from_xyz(pos.x, h + 5.0, pos.z),
+            WorldTerrain,
+        ));
+    }
+
+    // Light (Sun)
+    commands.spawn((
+        DirectionalLight {
+            illuminance: 32000.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        Transform::from_xyz(50.0, 100.0, 50.0).looking_at(MAZE_OFFSET, Vec3::Y),
+        MazeElement,
+    ));
+
+    // Spawn the Maze at the center
+    spawn_maze_at(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &asset_server,
+        MAZE_OFFSET,
+    );
+}
+
+fn spawn_maze_at(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    asset_server: &Res<AssetServer>,
+    offset: Vec3,
+) {
+    let wall_material = materials.add(Color::from(LinearRgba::from_f32_array([
+        0.4, 0.4, 0.4, 1.0,
+    ])));
+    let ground_material = materials.add(Color::from(LinearRgba::from_f32_array([
+        0.1, 0.1, 0.1, 1.0,
+    ])));
 
     for (z, row) in MAZE_DATA.iter().enumerate() {
         for (x, &cell) in row.iter().enumerate() {
-            let pos = Vec3::new(x as f32, 0.0, z as f32);
-            
-            // Ground: spawn only if it's not a pit/platform hole
+            let pos = offset + Vec3::new(x as f32 * 2.0, 0.0, z as f32 * 2.0);
+
+            // Ground
             if cell != 3 && cell != 4 {
                 commands.spawn((
-                    Mesh3d(meshes.add(Plane3d::default().mesh().size(1.0, 1.0))),
+                    Mesh3d(meshes.add(Plane3d::default().mesh().size(2.0, 2.0))),
                     MeshMaterial3d(ground_material.clone()),
                     Transform::from_translation(pos),
+                    MazeElement,
                 ));
             }
 
             if cell == 1 {
                 commands.spawn((
-                    Mesh3d(wall_mesh.clone()),
+                    Mesh3d(meshes.add(Cuboid::new(0.5, 2.0, 0.5))),
                     MeshMaterial3d(wall_material.clone()),
                     Transform::from_xyz(pos.x, 1.0, pos.z),
                     Wall,
+                    MazeElement,
                 ));
             }
 
-            // Spawn moving platform
             if cell == 3 {
-                let platform_mesh = meshes.add(Cuboid::new(1.0, 0.15, 1.0));
+                let platform_mesh = meshes.add(Cuboid::new(2.0, 0.3, 2.0));
                 let platform_material = materials.add(StandardMaterial {
                     base_color: Color::srgb(0.0, 0.8, 1.0),
                     emissive: LinearRgba::from_f32_array([0.0, 0.4, 0.8, 1.0]),
                     ..default()
                 });
-                
-                // Platforms oscillate along Z axis
-                let start_pos = Vec3::new(pos.x, 0.0, pos.z - 0.8);
-                let end_pos = Vec3::new(pos.x, 0.0, pos.z + 0.8);
-                
+                let start_pos = pos + Vec3::new(0.0, 0.0, -1.6);
+                let end_pos = pos + Vec3::new(0.0, 0.0, 1.6);
                 commands.spawn((
                     Mesh3d(platform_mesh),
                     MeshMaterial3d(platform_material),
@@ -79,10 +216,9 @@ pub fn spawn_maze(
                         forward: true,
                         delta: Vec3::ZERO,
                     },
+                    MazeElement,
                 ));
-
-                // Red lava glow far below
-                let lava_mesh = meshes.add(Plane3d::default().mesh().size(1.0, 1.0));
+                let lava_mesh = meshes.add(Plane3d::default().mesh().size(2.0, 2.0));
                 let lava_material = materials.add(StandardMaterial {
                     base_color: Color::srgb(0.8, 0.1, 0.0),
                     emissive: LinearRgba::from_f32_array([0.6, 0.05, 0.0, 1.0]),
@@ -92,12 +228,11 @@ pub fn spawn_maze(
                     Mesh3d(lava_mesh),
                     MeshMaterial3d(lava_material),
                     Transform::from_xyz(pos.x, -2.0, pos.z),
+                    MazeElement,
                 ));
             }
-
-            // Spawn static lava pit
             if cell == 4 {
-                let lava_mesh = meshes.add(Plane3d::default().mesh().size(1.0, 1.0));
+                let lava_mesh = meshes.add(Plane3d::default().mesh().size(2.0, 2.0));
                 let lava_material = materials.add(StandardMaterial {
                     base_color: Color::srgb(0.8, 0.1, 0.0),
                     emissive: LinearRgba::from_f32_array([0.6, 0.05, 0.0, 1.0]),
@@ -107,113 +242,110 @@ pub fn spawn_maze(
                     Mesh3d(lava_mesh),
                     MeshMaterial3d(lava_material),
                     Transform::from_xyz(pos.x, -2.0, pos.z),
+                    MazeElement,
                 ));
             }
-
-            // Spawn patrolling enemy
             if cell == 5 {
-                let enemy_mesh = meshes.add(Cuboid::new(0.6, 0.6, 0.6));
-                let enemy_material = materials.add(StandardMaterial {
-                    base_color: Color::srgb(0.5, 0.0, 1.0),
-                    emissive: LinearRgba::from_f32_array([1.5, 0.0, 3.0, 1.0]),
-                    ..default()
-                });
-
-                // Let enemy patrol horizontally (X-axis) back and forth
                 let patrol_points = vec![
-                    Vec3::new(pos.x - 1.5, 0.3, pos.z),
-                    Vec3::new(pos.x + 1.5, 0.3, pos.z),
+                    Vec3::new(pos.x - 3.0, 0.6, pos.z),
+                    Vec3::new(pos.x + 3.0, 0.6, pos.z),
                 ];
-
                 commands.spawn((
-                    Mesh3d(enemy_mesh),
-                    MeshMaterial3d(enemy_material),
-                    Transform::from_translation(Vec3::new(pos.x, 0.3, pos.z)),
+                    SceneRoot(asset_server.load("models/scorcher_enemy.glb#Scene0")),
+                    Transform::from_translation(Vec3::new(pos.x, 0.0, pos.z))
+                        .with_scale(Vec3::splat(0.05)),
                     Enemy {
                         speed: 1.5,
                         patrol_points,
                         current_waypoint: 0,
                         health: 2.0,
                     },
+                    MazeElement,
                 ));
             }
-
-            // Spawn treasure chest
             if cell == 6 {
-                let chest_mesh = meshes.add(Cuboid::new(0.6, 0.4, 0.4));
+                let chest_mesh = meshes.add(Cuboid::new(1.2, 0.8, 0.8));
                 let chest_material = materials.add(StandardMaterial {
                     base_color: Color::srgb(0.6, 0.3, 0.0),
                     perceptual_roughness: 0.8,
                     ..default()
                 });
-                
                 commands.spawn((
                     Mesh3d(chest_mesh),
                     MeshMaterial3d(chest_material),
-                    Transform::from_translation(Vec3::new(pos.x, 0.2, pos.z)),
+                    Transform::from_translation(Vec3::new(pos.x, 0.4, pos.z)),
                     Chest { opened: false },
+                    MazeElement,
                 ));
             }
-
-            // Spawn speed gem
-            if cell == 7 {
-                let gem_mesh = meshes.add(Sphere::new(0.18).mesh());
-                let gem_material = materials.add(StandardMaterial {
-                    base_color: Color::srgb(0.0, 0.6, 1.0),
-                    emissive: LinearRgba::from_f32_array([0.0, 1.2, 2.0, 1.0]),
-                    ..default()
-                });
-                
-                commands.spawn((
-                    Mesh3d(gem_mesh),
-                    MeshMaterial3d(gem_material),
-                    Transform::from_translation(Vec3::new(pos.x, 0.35, pos.z)),
-                    PowerUpItem { effect_type: PowerUpType::Speed },
-                ));
-            }
-
-            // Spawn shield gem
-            if cell == 8 {
-                let gem_mesh = meshes.add(Sphere::new(0.18).mesh());
-                let gem_material = materials.add(StandardMaterial {
-                    base_color: Color::srgb(1.0, 0.8, 0.0),
-                    emissive: LinearRgba::from_f32_array([2.0, 1.6, 0.0, 1.0]),
-                    ..default()
-                });
-                
-                commands.spawn((
-                    Mesh3d(gem_mesh),
-                    MeshMaterial3d(gem_material),
-                    Transform::from_translation(Vec3::new(pos.x, 0.35, pos.z)),
-                    PowerUpItem { effect_type: PowerUpType::Shield },
-                ));
-            }
-
-            // Spawn healing gem
-            if cell == 9 {
-                let gem_mesh = meshes.add(Sphere::new(0.18).mesh());
-                let gem_material = materials.add(StandardMaterial {
-                    base_color: Color::srgb(0.0, 1.0, 0.2),
-                    emissive: LinearRgba::from_f32_array([0.0, 2.0, 0.4, 1.0]),
-                    ..default()
-                });
-                
-                commands.spawn((
-                    Mesh3d(gem_mesh),
-                    MeshMaterial3d(gem_material),
-                    Transform::from_translation(Vec3::new(pos.x, 0.35, pos.z)),
-                    PowerUpItem { effect_type: PowerUpType::Healing },
-                ));
+            if cell == 7 || cell == 8 || cell == 9 {
+                let (color, effect) = match cell {
+                    7 => (Color::srgb(0.0, 0.6, 1.0), PowerUpType::Speed),
+                    8 => (Color::srgb(1.0, 0.8, 0.0), PowerUpType::Shield),
+                    _ => (Color::srgb(0.0, 1.0, 0.2), PowerUpType::Healing),
+                };
+                let emissive = match cell {
+                    7 => [0.0, 1.2, 2.0, 1.0],
+                    8 => [2.0, 1.6, 0.0, 1.0],
+                    _ => [0.0, 2.0, 0.4, 1.0],
+                };
+                if cell == 7 {
+                    commands.spawn((
+                        SceneRoot(asset_server.load("models/banana.glb#Scene0")),
+                        Transform::from_translation(Vec3::new(pos.x, 0.5, pos.z))
+                            .with_scale(Vec3::splat(0.25)),
+                        PowerUpItem {
+                            effect_type: effect,
+                        },
+                        MazeElement,
+                    ));
+                } else if cell == 9 {
+                    commands.spawn((
+                        SceneRoot(asset_server.load("models/apple.glb#Scene0")),
+                        Transform::from_translation(Vec3::new(pos.x, 0.5, pos.z))
+                            .with_scale(Vec3::splat(0.25)),
+                        PowerUpItem {
+                            effect_type: effect,
+                        },
+                        MazeElement,
+                    ));
+                } else {
+                    let gem_mesh = meshes.add(Sphere::new(0.36).mesh());
+                    let gem_material = materials.add(StandardMaterial {
+                        base_color: color,
+                        emissive: LinearRgba::from_f32_array(emissive),
+                        ..default()
+                    });
+                    commands.spawn((
+                        Mesh3d(gem_mesh),
+                        MeshMaterial3d(gem_material),
+                        Transform::from_translation(Vec3::new(pos.x, 0.7, pos.z)),
+                        PowerUpItem {
+                            effect_type: effect,
+                        },
+                        MazeElement,
+                    ));
+                }
             }
         }
     }
+}
 
-    // Light
-    commands.spawn((
-        DirectionalLight {
-            shadows_enabled: true,
-            ..default()
-        },
-        Transform::from_xyz(10.0, 20.0, 10.0).looking_at(Vec3::new(7.0, 0.0, 7.0), Vec3::Y),
-    ));
+pub fn cleanup_world(
+    mut commands: Commands,
+    q_maze: Query<Entity, With<MazeElement>>,
+    q_world: Query<Entity, With<WorldTerrain>>,
+    q_light: Query<Entity, With<WorldLight>>,
+) {
+    for e in q_maze.iter() {
+        commands.entity(e).despawn();
+    }
+    for e in q_world.iter() {
+        commands.entity(e).despawn();
+    }
+    for e in q_light.iter() {
+        commands.entity(e).despawn();
+    }
+
+    commands.insert_resource(ClearColor::default());
 }

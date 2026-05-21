@@ -29,7 +29,7 @@ pub fn animate_items(
     // Spin and bob power-ups
     for mut transform in &mut query {
         transform.rotate_y(1.5 * dt);
-        transform.translation.y = 0.35 + (elapsed * 4.0).sin() * 0.08;
+        transform.translation.y = 0.7 + (elapsed * 4.0).sin() * 0.16;
     }
 
     // Slightly bob chests if not opened (just a micro-animation)
@@ -43,8 +43,8 @@ pub fn check_powerup_collisions(
     mut player_query: Query<(&Transform, &mut Player)>,
     powerup_query: Query<(Entity, &Transform, &PowerUpItem)>,
 ) {
-    let player_radius = 0.3;
-    let powerup_radius = 0.25;
+    let player_radius = 0.6;
+    let powerup_radius = 0.5;
 
     for (player_transform, mut player) in &mut player_query {
         let player_pos = player_transform.translation;
@@ -88,7 +88,7 @@ pub fn check_chest_interactions(
             }
 
             let dist = player_pos.distance(transform.translation);
-            if dist < 1.2 {
+            if dist < 2.4 {
                 chest.opened = true;
                 player.score += 200; // Large reward!
                 

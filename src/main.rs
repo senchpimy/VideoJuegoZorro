@@ -34,7 +34,7 @@ fn main() {
         .add_systems(OnExit(GameState::Menu), menu::cleanup_menu)
 
         // Playing State
-        .add_systems(OnEnter(GameState::Playing), (maze::spawn_maze, player::spawn_player, ui::setup_ui))
+        .add_systems(OnEnter(GameState::Playing), (maze::spawn_world, player::spawn_player, ui::setup_ui))
         .add_systems(Update, (
             player::player_movement.run_if(in_state(GameState::Playing)),
             platform::move_platforms.run_if(in_state(GameState::Playing)),
@@ -49,6 +49,12 @@ fn main() {
             ui::update_ui.run_if(in_state(GameState::Playing)),
             camera::camera_follow.run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
             toggle_pause.run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
+        ))
+        .add_systems(OnExit(GameState::Playing), (
+            maze::cleanup_world,
+            player::cleanup_player,
+            ui::cleanup_ui,
+            projectile::cleanup_projectiles,
         ))
 
         // Paused State

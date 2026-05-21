@@ -23,11 +23,11 @@ pub fn move_enemies(
         let diff = target - transform.translation;
         let dist = diff.length();
 
-        if dist < 0.1 {
+        if dist < 0.2 {
             enemy.current_waypoint = (enemy.current_waypoint + 1) % enemy.patrol_points.len();
         } else {
             let dir = diff.normalize();
-            transform.translation += dir * enemy.speed * dt;
+            transform.translation += dir * enemy.speed * 2.0 * dt; // Scaled speed
             
             let target_rotation = Quat::from_rotation_y(f32::atan2(dir.x, dir.z));
             transform.rotation = transform.rotation.slerp(target_rotation, 0.1);
@@ -40,8 +40,8 @@ pub fn check_enemy_projectile_collision(
     mut enemy_query: Query<(Entity, &Transform, &mut Enemy)>,
     projectile_query: Query<(Entity, &Transform), With<Projectile>>,
 ) {
-    let enemy_radius = 0.3;
-    let proj_radius = 0.15;
+    let enemy_radius = 0.6;
+    let proj_radius = 0.3;
 
     for (enemy_entity, enemy_transform, mut enemy) in &mut enemy_query {
         let enemy_pos = enemy_transform.translation;
@@ -66,8 +66,8 @@ pub fn check_enemy_player_collision(
     mut player_query: Query<(&mut Transform, &mut Player), Without<Enemy>>,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    let player_radius = 0.3;
-    let enemy_radius = 0.3;
+    let player_radius = 0.6;
+    let enemy_radius = 0.6;
     
     for (mut player_transform, mut player) in &mut player_query {
         if player.invulnerable_timer > 0.0 || player.shield_timer > 0.0 {
@@ -87,7 +87,7 @@ pub fn check_enemy_player_collision(
                 
                 // Knockback
                 let push_dir = (player_pos - enemy_pos).normalize();
-                player_transform.translation += Vec3::new(push_dir.x, 0.0, push_dir.z) * 0.8;
+                player_transform.translation += Vec3::new(push_dir.x, 0.0, push_dir.z) * 1.6;
                 break;
             }
         }

@@ -21,9 +21,9 @@ pub fn player_fire(
         if let Some(player_transform) = player_query.iter().next() {
             // Get forward vector based on player's current rotation
             let forward = player_transform.rotation * Vec3::new(0.0, 0.0, 1.0);
-            let spawn_pos = player_transform.translation + forward * 0.5 + Vec3::new(0.0, 0.3, 0.0);
+            let spawn_pos = player_transform.translation + forward * 1.0 + Vec3::new(0.0, 0.6, 0.0);
 
-            let proj_mesh = meshes.add(Sphere::new(0.15).mesh());
+            let proj_mesh = meshes.add(Sphere::new(0.3).mesh());
             let proj_material = materials.add(StandardMaterial {
                 base_color: Color::srgb(1.0, 0.5, 0.0),
                 emissive: LinearRgba::from_f32_array([2.0, 1.0, 0.0, 1.0]),
@@ -36,11 +36,17 @@ pub fn player_fire(
                 Transform::from_translation(spawn_pos),
                 Projectile {
                     direction: forward.normalize(),
-                    speed: 8.0,
+                    speed: 16.0,
                     lifetime: Timer::from_seconds(2.0, TimerMode::Once),
                 },
             ));
         }
+    }
+}
+
+pub fn cleanup_projectiles(mut commands: Commands, query: Query<Entity, With<Projectile>>) {
+    for entity in &query {
+        commands.entity(entity).despawn();
     }
 }
 
@@ -51,8 +57,8 @@ pub fn update_projectiles(
     wall_query: Query<&Transform, (With<Wall>, Without<Projectile>)>,
 ) {
     let dt = time.delta_secs();
-    let wall_size = 0.5;
-    let proj_radius = 0.15;
+    let wall_size = 1.0;
+    let proj_radius = 0.3;
 
     for (entity, mut transform, mut projectile) in &mut projectile_query {
         projectile.lifetime.tick(time.delta());
@@ -71,7 +77,7 @@ pub fn update_projectiles(
             let wall_pos = wall_transform.translation;
             let collision_x = (pos.x - wall_pos.x).abs() < (proj_radius + wall_size);
             let collision_z = (pos.z - wall_pos.z).abs() < (proj_radius + wall_size);
-            let collision_y = pos.y >= 0.0 && pos.y <= 2.0;
+            let collision_y = pos.y >= 0.0 && pos.y <= 4.0;
 
             if collision_x && collision_z && collision_y {
                 hit = true;
