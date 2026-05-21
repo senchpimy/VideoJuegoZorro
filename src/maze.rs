@@ -35,25 +35,8 @@ pub struct WorldLight;
 const WORLD_SIZE: i32 = 60; // 60x60 grid
 pub const MAZE_OFFSET: Vec3 = Vec3::new(60.0, 0.0, 60.0); // Maze at the center of the world
 
-pub fn terrain_height(x: f32, z: f32) -> f32 {
-    let dist_from_center = Vec2::new(x - MAZE_OFFSET.x, z - MAZE_OFFSET.z).length();
-
-    // Smooth hills using sine waves
-    let hills = (x * 0.15).sin() * (z * 0.15).cos() * 1.5;
-
-    // Mountains at the edges
-    let boundary = 50.0;
-    let mut mountain = 0.0;
-    if dist_from_center > boundary {
-        mountain = (dist_from_center - boundary).powf(1.8) * 0.5;
-    }
-
-    // Flatten the maze area
-    let maze_radius = 20.0;
-    let t = (dist_from_center / maze_radius).min(1.0);
-    let smooth_t = t * t * (3.0 - 2.0 * t); // Smoothstep
-
-    (hills + mountain) * smooth_t
+pub fn terrain_height(_x: f32, _z: f32) -> f32 {
+    0.0
 }
 
 pub fn spawn_world(
