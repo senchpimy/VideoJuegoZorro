@@ -12,7 +12,7 @@ pub struct Projectile {
 pub fn player_fire(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mouse_input: Res<ButtonInput<MouseButton>>,
+    _mouse_input: Res<ButtonInput<MouseButton>>,
     player_query: Query<&Transform, With<Player>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
