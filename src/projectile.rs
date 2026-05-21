@@ -57,7 +57,7 @@ pub fn update_projectiles(
     wall_query: Query<&Transform, (With<Wall>, Without<Projectile>)>,
 ) {
     let dt = time.delta_secs();
-    let wall_size = 1.0;
+    let wall_size = 0.4;
     let proj_radius = 0.3;
 
     for (entity, mut transform, mut projectile) in &mut projectile_query {
