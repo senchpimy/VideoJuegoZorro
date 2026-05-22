@@ -27,6 +27,10 @@ pub enum GameState {
     GameWon,
 }
 
+/// Tracks whether the game was paused, so we can skip spawn/cleanup on resume.
+#[derive(Resource, Default)]
+struct PausedFlag(bool);
+
 #[derive(Resource)]
 pub struct UiAudioAssets {
     pub click: Handle<AudioSource>,
@@ -53,6 +57,7 @@ fn main() {
         }))
         .add_plugins(PhysicsPlugins::default())
         .init_state::<GameState>()
+        .init_resource::<PausedFlag>()
         .add_systems(Startup, setup_ui_audio)
         // Global Startup
         .add_systems(Startup, camera::spawn_camera)
@@ -64,12 +69,15 @@ fn main() {
 
         // Playing State
         .add_systems(OnEnter(GameState::Playing), (
-            maze::spawn_world, 
-            tutorial::spawn_tutorial, 
-            player::spawn_player, 
-            ui::setup_ui,
-            enemy::setup_enemy_assets,
-        ))
+            (
+                maze::spawn_world, 
+                tutorial::spawn_tutorial, 
+                player::spawn_player, 
+                ui::setup_ui,
+                enemy::setup_enemy_assets,
+            ).run_if(is_not_resuming),
+            reset_paused_flag,
+        ).chain())
         .add_systems(Update, (
             player::link_player_animations.run_if(in_state(GameState::Playing)),
             player::player_movement.run_if(in_state(GameState::Playing)),
@@ -106,7 +114,7 @@ fn main() {
             player::cleanup_player,
             ui::cleanup_ui,
             projectile::cleanup_projectiles,
-        ))
+        ).run_if(is_not_resuming))
 
         // Paused State
         .add_systems(OnEnter(GameState::Paused), pause::setup_pause)
@@ -124,6 +132,16 @@ fn main() {
         .add_systems(OnExit(GameState::GameWon), ui::cleanup_win_screen)
 
         .run();
+}
+
+/// Run condition to skip setup/cleanup when resuming from pause
+fn is_not_resuming(paused_flag: Res<PausedFlag>) -> bool {
+    !paused_flag.0
+}
+
+/// Resets the paused flag back to false after state enter checks are finished
+fn reset_paused_flag(mut paused_flag: ResMut<PausedFlag>) {
+    paused_flag.0 = false;
 }
 
 fn handle_cursor_grab(
@@ -145,14 +163,21 @@ fn toggle_pause(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
+    mut paused_flag: ResMut<PausedFlag>,
     mut commands: Commands,
     audio_assets: Res<UiAudioAssets>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Escape) {
         commands.spawn(AudioPlayer(audio_assets.click.clone()));
         match state.get() {
-            GameState::Playing => next_state.set(GameState::Paused),
-            GameState::Paused => next_state.set(GameState::Playing),
+            GameState::Playing => {
+                paused_flag.0 = true;
+                next_state.set(GameState::Paused);
+            }
+            GameState::Paused => {
+                paused_flag.0 = false;
+                next_state.set(GameState::Playing);
+            }
             _ => {}
         }
     }
