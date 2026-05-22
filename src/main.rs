@@ -88,6 +88,7 @@ fn main() {
             enemy::process_enemy_assets.run_if(in_state(GameState::Playing)),
             enemy::init_enemy_animations.run_if(in_state(GameState::Playing)),
             enemy::play_enemy_animations.run_if(in_state(GameState::Playing)),
+            enemy::disable_culling_for_enemies.run_if(in_state(GameState::Playing)),
             enemy::move_enemies.run_if(in_state(GameState::Playing)),
         ))
         .add_systems(Update, (

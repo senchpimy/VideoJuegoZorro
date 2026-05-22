@@ -4,6 +4,7 @@ use crate::platform::MovingPlatform;
 use crate::powerup::{Chest, PowerUpItem, PowerUpType};
 use crate::tutorial::PhysicsCube;
 use bevy::prelude::*;
+use bevy::camera::visibility::NoFrustumCulling;
 use avian3d::prelude::{RigidBody, Collider};
 
 #[derive(Component)]
@@ -323,15 +324,11 @@ fn spawn_maze_at(
                 ));
             }
             if cell == 11 {
-                // Chasing Phantom enemy — represented as a glowing red cube
+                // Chasing Phantom enemy — represented as a worm model
                 commands.spawn((
-                    Mesh3d(meshes.add(Cuboid::new(2.0, 2.0, 2.0))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(1.0, 0.0, 0.0),
-                        emissive: LinearRgba::from_f32_array([5.0, 0.0, 0.0, 1.0]),
-                        ..default()
-                    })),
-                    Transform::from_translation(Vec3::new(pos.x, 2.5, pos.z)),
+                    SceneRoot(asset_server.load("models/worm_enemy.glb#Scene0")),
+                    Transform::from_translation(Vec3::new(pos.x, 0.82, pos.z))
+                        .with_scale(Vec3::splat(0.2)),
                     Enemy {
                         enemy_type: EnemyType::Phantom,
                         speed: 3.5,
@@ -340,7 +337,32 @@ fn spawn_maze_at(
                         health: 4.0,
                     },
                     MazeElement,
-                ));
+                    NoFrustumCulling,
+                    Visibility::default(),
+                    InheritedVisibility::default(),
+                )).with_children(|parent| {
+                    // Red glowing indicator sphere floating above the worm
+                    parent.spawn((
+                        Mesh3d(meshes.add(Sphere::new(0.3).mesh())),
+                        MeshMaterial3d(materials.add(StandardMaterial {
+                            base_color: Color::srgb(1.0, 0.1, 0.1),
+                            emissive: LinearRgba::from_f32_array([8.0, 0.0, 0.0, 1.0]),
+                            ..default()
+                        })),
+                        Transform::from_xyz(0.0, 1.8, 0.0),
+                    ));
+                    // Red light to make it highly distinctive and easy to find
+                    parent.spawn((
+                        PointLight {
+                            color: Color::srgb(1.0, 0.0, 0.0),
+                            intensity: 40000.0,
+                            range: 10.0,
+                            ..default()
+                        },
+                        Transform::from_xyz(0.0, 2.0, 0.0),
+                        MazeElement,
+                    ));
+                });
             }
 
             if cell == 6 {

@@ -2,6 +2,7 @@ use crate::collision::Wall;
 use crate::enemy::{Enemy, EnemyType};
 use crate::powerup::{PowerUpItem, PowerUpType};
 use avian3d::prelude::*;
+use bevy::camera::visibility::NoFrustumCulling;
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -35,16 +36,12 @@ pub fn spawn_tutorial(
         TimerMode::Repeating,
     )));
 
-    // Phantom enemy in tutorial area — red cube model to test chasing logic
+    // Phantom enemy in tutorial area — worm model to test chasing logic
     let room3_pos = TUTORIAL_OFFSET + Vec3::new(0.0, 0.0, -40.0);
     commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgb(1.0, 0.0, 0.0),
-            emissive: LinearRgba::from_f32_array([5.0, 0.0, 0.0, 1.0]),
-            ..default()
-        })),
-        Transform::from_translation(room3_pos + Vec3::new(-4.0, 1.0, 0.0)),
+        SceneRoot(asset_server.load("models/worm_enemy.glb#Scene0")),
+        Transform::from_translation(room3_pos + Vec3::new(0.0, 0.5, 0.0))
+            .with_scale(Vec3::splat(3.0)),
         Enemy {
             enemy_type: EnemyType::Phantom,
             speed: 3.5,
@@ -53,9 +50,10 @@ pub fn spawn_tutorial(
             health: 4.0,
         },
         TutorialElement,
+        NoFrustumCulling,
+        Visibility::default(),
+        InheritedVisibility::default(),
     ));
-
-
 
     // ROOM 1: MOVEMENT
     spawn_room(
@@ -125,8 +123,6 @@ pub fn spawn_tutorial(
         },
         TutorialElement,
     ));
-
-
 
     // ROOM 4: POWERUPS
     let room4_pos = room3_pos + Vec3::new(0.0, 0.0, -20.0);
@@ -428,7 +424,8 @@ pub fn check_portal_teleport(
             // Check flat XZ horizontal distance to make triggering portal feel smooth and responsive
             let player_pos = player_transform.translation;
             let portal_pos = portal_transform.translation;
-            let xz_dist = Vec2::new(player_pos.x, player_pos.z).distance(Vec2::new(portal_pos.x, portal_pos.z));
+            let xz_dist = Vec2::new(player_pos.x, player_pos.z)
+                .distance(Vec2::new(portal_pos.x, portal_pos.z));
 
             if xz_dist < 1.8 {
                 info!("Teleporting player from tutorial to the maze!");

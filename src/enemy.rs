@@ -1,8 +1,9 @@
-use bevy::prelude::*;
 use crate::player::Player;
 use crate::projectile::Projectile;
 use crate::{GameState, UiAudioAssets};
+use bevy::prelude::*;
 
+use bevy::camera::visibility::NoFrustumCulling;
 use bevy::gltf::Gltf;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -40,12 +41,9 @@ pub struct EnemyAnimationAssets {
     pub worm_node: Option<AnimationNodeIndex>,
 }
 
-pub fn setup_enemy_assets(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
+pub fn setup_enemy_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     let scorcher_gltf = asset_server.load("models/scorcher_enemy.glb");
-    let worm_gltf = asset_server.load("models/sign_enemy.glb");
+    let worm_gltf = asset_server.load("models/worm_enemy.glb");
     commands.insert_resource(EnemyAnimationAssets {
         scorcher_gltf,
         worm_gltf,
@@ -61,7 +59,9 @@ pub fn process_enemy_assets(
     // Process Scorcher
     if assets.scorcher_graph.is_none() {
         if let Some(gltf) = gltfs.get(&assets.scorcher_gltf) {
-            let clip = gltf.named_animations.get("start")
+            let clip = gltf
+                .named_animations
+                .get("start")
                 .or_else(|| gltf.named_animations.get("Start"))
                 .or_else(|| gltf.animations.first())
                 .cloned();
@@ -78,9 +78,17 @@ pub fn process_enemy_assets(
     // Process Worm (using sign_enemy.glb now)
     if assets.worm_graph.is_none() {
         if let Some(gltf) = gltfs.get(&assets.worm_gltf) {
-            info!("Sign Enemy GLTF loaded. Animations: {}, Scenes: {}", gltf.animations.len(), gltf.scenes.len());
+            info!(
+                "Sign Enemy GLTF loaded. Animations: {}, Scenes: {}",
+                gltf.animations.len(),
+                gltf.scenes.len()
+            );
             // Trying animation index 2 if available, fallback to first
-            let clip = gltf.animations.get(2).cloned().or_else(|| gltf.animations.first().cloned());
+            let clip = gltf
+                .animations
+                .get(2)
+                .cloned()
+                .or_else(|| gltf.animations.first().cloned());
 
             if let Some(clip) = clip {
                 let mut graph = AnimationGraph::new();
@@ -100,15 +108,10 @@ pub fn init_enemy_animations(
     anim_player_query: Query<Entity, With<AnimationPlayer>>,
 ) {
     for (enemy_entity, enemy) in &enemy_query {
-        // Phantoms have no model/animations — skip them entirely.
-        if enemy.enemy_type == EnemyType::Phantom {
-            continue;
-        }
-
         let (graph_handle, node) = match enemy.enemy_type {
             EnemyType::Scorcher => (assets.scorcher_graph.as_ref(), assets.scorcher_node),
             EnemyType::Worm => (assets.worm_graph.as_ref(), assets.worm_node),
-            EnemyType::Phantom => unreachable!(),
+            EnemyType::Phantom => (assets.worm_graph.as_ref(), assets.worm_node),
         };
 
         if let (Some(graph_handle), Some(node)) = (graph_handle, node) {
@@ -118,12 +121,10 @@ pub fn init_enemy_animations(
                         AnimationGraphHandle(graph_handle.clone()),
                         AnimationTransitions::default(),
                     ));
-                    
+
                     commands.entity(enemy_entity).insert((
                         EnemyAnimationPlayerLink(descendant),
-                        EnemyAnimation {
-                            anim_node: node,
-                        },
+                        EnemyAnimation { anim_node: node },
                     ));
                     break;
                 }
@@ -139,7 +140,13 @@ pub fn play_enemy_animations(
     for (link, anim) in &enemy_query {
         if let Ok((mut player, mut transitions)) = anim_player_query.get_mut(link.0) {
             if !player.is_playing_animation(anim.anim_node) {
-                transitions.play(&mut player, anim.anim_node, std::time::Duration::from_millis(200)).repeat();
+                transitions
+                    .play(
+                        &mut player,
+                        anim.anim_node,
+                        std::time::Duration::from_millis(200),
+                    )
+                    .repeat();
             }
         }
     }
@@ -148,11 +155,25 @@ pub fn play_enemy_animations(
 pub fn move_enemies(
     time: Res<Time>,
     player_query: Query<&Transform, With<Player>>,
-    mut enemy_query: Query<(&mut Transform, &mut Enemy), (Without<Player>, Without<crate::collision::Wall>)>,
-    wall_query: Query<(&Transform, &crate::collision::Wall), (With<crate::collision::Wall>, Without<Player>, Without<Enemy>)>,
+    mut enemy_query: Query<
+        (&mut Transform, &mut Enemy),
+        (Without<Player>, Without<crate::collision::Wall>),
+    >,
+    wall_query: Query<
+        (&Transform, &crate::collision::Wall),
+        (
+            With<crate::collision::Wall>,
+            Without<Player>,
+            Without<Enemy>,
+        ),
+    >,
 ) {
     let dt = time.delta_secs();
-    let player_pos = player_query.iter().next().map(|t| t.translation).unwrap_or(Vec3::ZERO);
+    let player_pos = player_query
+        .iter()
+        .next()
+        .map(|t| t.translation)
+        .unwrap_or(Vec3::ZERO);
 
     for (mut transform, mut enemy) in &mut enemy_query {
         let target_pos = match enemy.enemy_type {
@@ -172,7 +193,8 @@ pub fn move_enemies(
         match enemy.enemy_type {
             EnemyType::Scorcher => {
                 if dist < 0.2 {
-                    enemy.current_waypoint = (enemy.current_waypoint + 1) % enemy.patrol_points.len();
+                    enemy.current_waypoint =
+                        (enemy.current_waypoint + 1) % enemy.patrol_points.len();
                 } else {
                     let dir = diff.normalize();
                     transform.translation += dir * enemy.speed * 2.0 * dt;
@@ -191,19 +213,21 @@ pub fn move_enemies(
                     if diff_xz.length() > 0.1 {
                         let dir = diff_xz.normalize();
                         let step = dir * enemy.speed * dt;
-                        
+
                         let enemy_radius = 0.45; // slightly smaller than half-size for smooth corner sliding
                         let mut next_pos = transform.translation;
 
                         // Try moving along X axis
                         let test_pos_x = Vec3::new(next_pos.x + step.x, next_pos.y, next_pos.z);
-                        if !crate::collision::check_collision(test_pos_x, enemy_radius, &wall_query) {
+                        if !crate::collision::check_collision(test_pos_x, enemy_radius, &wall_query)
+                        {
                             next_pos.x = test_pos_x.x;
                         }
 
                         // Try moving along Z axis
                         let test_pos_z = Vec3::new(next_pos.x, next_pos.y, next_pos.z + step.z);
-                        if !crate::collision::check_collision(test_pos_z, enemy_radius, &wall_query) {
+                        if !crate::collision::check_collision(test_pos_z, enemy_radius, &wall_query)
+                        {
                             next_pos.z = test_pos_z.z;
                         }
 
@@ -232,9 +256,10 @@ pub fn check_enemy_projectile_collision(
         let enemy_pos = enemy_transform.translation;
         for (proj_entity, proj_transform) in &projectile_query {
             let proj_pos = proj_transform.translation;
-            
+
             // Check XZ horizontal distance to ignore floating/vertical offsets
-            let xz_dist = Vec2::new(enemy_pos.x, enemy_pos.z).distance(Vec2::new(proj_pos.x, proj_pos.z));
+            let xz_dist =
+                Vec2::new(enemy_pos.x, enemy_pos.z).distance(Vec2::new(proj_pos.x, proj_pos.z));
 
             if xz_dist < (enemy_radius + proj_radius) {
                 // Destroy the projectile
@@ -243,7 +268,7 @@ pub fn check_enemy_projectile_collision(
                 commands.entity(enemy_entity).despawn();
                 // Play death sound
                 commands.spawn(AudioPlayer(audio_assets.enemy_death.clone()));
-                
+
                 // Award points to the player
                 if let Ok(mut player) = player_query.single_mut() {
                     player.score += 100;
@@ -264,16 +289,17 @@ pub fn check_enemy_player_collision(
         if player.invulnerable_timer > 0.0 || player.shield_timer > 0.0 {
             continue;
         }
-        
+
         let player_pos = player_transform.translation;
         for enemy_transform in &enemy_query {
             let enemy_pos = enemy_transform.translation;
-            
+
             // Check horizontal distance (More generous radius: 1.2 total)
-            let xz_dist = Vec2::new(player_pos.x, player_pos.z).distance(Vec2::new(enemy_pos.x, enemy_pos.z));
+            let xz_dist =
+                Vec2::new(player_pos.x, player_pos.z).distance(Vec2::new(enemy_pos.x, enemy_pos.z));
             // Check vertical overlap (Much more generous: 4.0 units)
             let y_diff = (player_pos.y - enemy_pos.y).abs();
-            
+
             if xz_dist < 1.2 && y_diff < 4.0 {
                 if player.health > 0.0 {
                     player.health -= 1.5;
@@ -283,7 +309,7 @@ pub fn check_enemy_player_collision(
                 }
                 player.damage_flash_timer = 1.2;
                 player.invulnerable_timer = 1.5;
-                
+
                 // Knockback
                 let diff = player_pos - enemy_pos;
                 let push_dir = Vec3::new(diff.x, 0.0, diff.z).normalize_or_zero();
@@ -304,6 +330,31 @@ pub fn check_player_death(
         if player.health <= 0.0 {
             commands.spawn(AudioPlayer(audio_assets.death.clone()));
             next_state.set(GameState::GameOver);
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct CullingDisabled;
+
+pub fn disable_culling_for_enemies(
+    mut commands: Commands,
+    enemy_query: Query<(Entity, &Enemy), (With<Enemy>, Without<CullingDisabled>)>,
+    children_query: Query<&Children>,
+) {
+    for (enemy_entity, enemy) in &enemy_query {
+        if enemy.enemy_type == EnemyType::Phantom {
+            let child_count = children_query.iter_descendants(enemy_entity).count();
+            info!("Phantom {:?} descendants: {}", enemy_entity, child_count);
+            // Disable culling on the parent
+            commands
+                .entity(enemy_entity)
+                .insert((NoFrustumCulling, CullingDisabled));
+
+            // Recursively disable culling on all child nodes generated from the GLTF scene
+            for descendant in children_query.iter_descendants(enemy_entity) {
+                commands.entity(descendant).insert(NoFrustumCulling);
+            }
         }
     }
 }
