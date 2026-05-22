@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use crate::player::Player;
+use crate::tutorial::TutorialElement;
 use crate::UiAudioAssets;
 
 #[derive(Component)]
@@ -156,6 +157,47 @@ pub fn setup_ui(mut commands: Commands) {
         GameUi,
         GlobalZIndex(50),
     ));
+
+    // ── Controls & Rules (Top-Right) ────────────────────────────────────────
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(15.0),
+            right: Val::Px(15.0),
+            padding: UiRect::all(Val::Px(15.0)),
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(8.0),
+            ..default()
+        },
+        BackgroundColor(Color::BLACK.with_alpha(0.7)),
+        TutorialElement,
+        GameUi,
+        GlobalZIndex(10),
+    )).with_children(|parent| {
+        parent.spawn((
+            Text::new("CONTROLES"),
+            TextFont { font_size: 20.0, ..default() },
+            TextColor(Color::srgb(1.0, 1.0, 0.0)),
+        ));
+        parent.spawn((
+            Text::new("WASD: Moverse\nESPACIO: Saltar\nSHIFT: Atacar\nCTRL: Agarrar Bloques"),
+            TextFont { font_size: 16.0, ..default() },
+            TextColor(Color::WHITE),
+        ));
+        
+        parent.spawn(Node { height: Val::Px(10.0), ..default() });
+        
+        parent.spawn((
+            Text::new("REGLAS"),
+            TextFont { font_size: 20.0, ..default() },
+            TextColor(Color::srgb(0.0, 1.0, 1.0)),
+        ));
+        parent.spawn((
+            Text::new("1. Supera el tutorial\n2. Entra al portal\n3. Lleva los bloques a sus zonas"),
+            TextFont { font_size: 16.0, ..default() },
+            TextColor(Color::WHITE),
+        ));
+    });
 }
 
 pub fn cleanup_ui(mut commands: Commands, query: Query<Entity, With<GameUi>>) {

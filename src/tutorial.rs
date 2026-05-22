@@ -218,7 +218,12 @@ pub fn spawn_physics_cubes(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     cube_query: Query<&PhysicsCube>,
+    portal_query: Query<Entity, With<MagicPortal>>,
 ) {
+    if portal_query.is_empty() {
+        return;
+    }
+
     if timer.0.tick(time.delta()).just_finished() {
         let count = cube_query.iter().count();
         if count < 3 {
@@ -416,8 +421,10 @@ pub fn cleanup_tutorial(mut commands: Commands, query: Query<Entity, With<Tutori
 }
 
 pub fn check_portal_teleport(
+    mut commands: Commands,
     mut player_query: Query<&mut Transform, With<crate::player::Player>>,
     portal_query: Query<&Transform, (With<MagicPortal>, Without<crate::player::Player>)>,
+    elements_query: Query<Entity, With<TutorialElement>>,
 ) {
     if let Ok(mut player_transform) = player_query.single_mut() {
         for portal_transform in &portal_query {
@@ -431,6 +438,11 @@ pub fn check_portal_teleport(
                 info!("Teleporting player from tutorial to the maze!");
                 // Teleport to the maze starting position (cell 2)
                 player_transform.translation = crate::maze::MAZE_OFFSET + Vec3::new(2.0, 1.0, 2.0);
+
+                // Cleanup tutorial elements including the controls UI
+                for entity in &elements_query {
+                    commands.entity(entity).despawn();
+                }
             }
         }
     }
