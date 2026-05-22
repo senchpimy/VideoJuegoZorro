@@ -54,7 +54,7 @@ pub fn check_powerup_collisions(
                 // Apply effect
                 match powerup.effect_type {
                     PowerUpType::Healing => {
-                        player.health = (player.health + 1).min(player.max_health);
+                        player.health = (player.health + 1.0).min(player.max_health);
                     }
                     PowerUpType::Speed => {
                         player.speed_boost_timer = 8.0;

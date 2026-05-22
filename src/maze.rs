@@ -1,5 +1,5 @@
 use crate::collision::Wall;
-use crate::enemy::Enemy;
+use crate::enemy::{Enemy, EnemyType};
 use crate::platform::MovingPlatform;
 use crate::powerup::{Chest, PowerUpItem, PowerUpType};
 use bevy::prelude::*;
@@ -279,14 +279,15 @@ fn spawn_maze_at(
             }
             if cell == 5 {
                 let patrol_points = vec![
-                    Vec3::new(pos.x - 3.0, 10.5, pos.z),
-                    Vec3::new(pos.x + 3.0, 10.5, pos.z),
+                    Vec3::new(pos.x - 3.0, 2.5, pos.z),
+                    Vec3::new(pos.x + 3.0, 2.5, pos.z),
                 ];
                 commands.spawn((
                     SceneRoot(asset_server.load("models/scorcher_enemy.glb#Scene0")),
-                    Transform::from_translation(Vec3::new(pos.x, 8.0, pos.z))
+                    Transform::from_translation(Vec3::new(pos.x, 2.5, pos.z))
                         .with_scale(Vec3::splat(0.012)),
                     Enemy {
+                        enemy_type: EnemyType::Scorcher,
                         speed: 1.5,
                         patrol_points,
                         current_waypoint: 0,
@@ -295,6 +296,34 @@ fn spawn_maze_at(
                     MazeElement,
                 ));
             }
+            if cell == 11 {
+                // DEBUG: red cube to verify spawn position is visible
+                commands.spawn((
+                    Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: Color::srgb(1.0, 0.0, 0.0),
+                        emissive: LinearRgba::from_f32_array([5.0, 0.0, 0.0, 1.0]),
+                        ..default()
+                    })),
+                    Transform::from_translation(Vec3::new(pos.x, 2.5, pos.z)),
+                    MazeElement,
+                ));
+                // Phantom: chases the player, uses the worm model.
+                commands.spawn((
+                    SceneRoot(asset_server.load("models/sign_enemy.glb#Scene0")),
+                    Transform::from_translation(Vec3::new(pos.x, 2.5, pos.z))
+                        .with_scale(Vec3::splat(0.012)),
+                    Enemy {
+                        enemy_type: EnemyType::Phantom,
+                        speed: 3.5,
+                        patrol_points: vec![],
+                        current_waypoint: 0,
+                        health: 4.0,
+                    },
+                    MazeElement,
+                ));
+            }
+
             if cell == 6 {
                 let chest_mesh = meshes.add(Cuboid::new(1.2, 0.8, 0.8));
                 let chest_material = materials.add(StandardMaterial {

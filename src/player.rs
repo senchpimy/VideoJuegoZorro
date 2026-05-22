@@ -9,8 +9,8 @@ use crate::tutorial::PhysicsCube;
 pub struct Player {
     pub velocity_y: f32,
     pub is_grounded: bool,
-    pub health: u32,
-    pub max_health: u32,
+    pub health: f32,
+    pub max_health: f32,
     pub invulnerable_timer: f32,
     pub score: u32,
     pub speed_boost_timer: f32,
@@ -23,8 +23,8 @@ impl Default for Player {
         Self {
             velocity_y: 0.0,
             is_grounded: true,
-            health: 3,
-            max_health: 3,
+            health: 10.0,
+            max_health: 10.0,
             invulnerable_timer: 0.0,
             score: 0,
             speed_boost_timer: 0.0,
@@ -163,8 +163,8 @@ pub fn player_movement(
 
         // Falling off the world (though with terrain it's harder)
         if player_transform.translation.y < -10.0 {
-            if player.health > 0 {
-                player.health -= 1;
+            if player.health > 0.0 {
+                player.health -= 1.5;
             }
             player.invulnerable_timer = 1.5;
             player_transform.translation = Vec3::new(0.0, 10.0, 0.0); 

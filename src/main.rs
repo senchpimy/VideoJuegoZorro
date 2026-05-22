@@ -21,6 +21,7 @@ pub enum GameState {
     Menu,
     Playing,
     Paused,
+    GameOver,
 }
 
 fn main() {
@@ -55,8 +56,11 @@ fn main() {
             enemy::init_enemy_animations.run_if(in_state(GameState::Playing)),
             enemy::play_enemy_animations.run_if(in_state(GameState::Playing)),
             enemy::move_enemies.run_if(in_state(GameState::Playing)),
+        ))
+        .add_systems(Update, (
             enemy::check_enemy_projectile_collision.run_if(in_state(GameState::Playing)),
             enemy::check_enemy_player_collision.run_if(in_state(GameState::Playing)),
+            enemy::check_player_death.run_if(in_state(GameState::Playing)),
             powerup::animate_items.run_if(in_state(GameState::Playing)),
             powerup::check_powerup_collisions.run_if(in_state(GameState::Playing)),
             powerup::check_chest_interactions.run_if(in_state(GameState::Playing)),
@@ -79,6 +83,11 @@ fn main() {
         .add_systems(Update, pause::pause_action.run_if(in_state(GameState::Paused)))
         .add_systems(OnExit(GameState::Paused), pause::cleanup_pause)
         
+        // GameOver State
+        .add_systems(OnEnter(GameState::GameOver), ui::setup_death_screen)
+        .add_systems(Update, ui::death_screen_action.run_if(in_state(GameState::GameOver)))
+        .add_systems(OnExit(GameState::GameOver), ui::cleanup_death_screen)
+
         .run();
 }
 

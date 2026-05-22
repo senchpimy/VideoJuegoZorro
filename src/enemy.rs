@@ -1,11 +1,21 @@
 use bevy::prelude::*;
 use crate::player::Player;
 use crate::projectile::Projectile;
+use crate::GameState;
 
 use bevy::gltf::Gltf;
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum EnemyType {
+    Scorcher,
+    Worm,
+    /// Invisible enemy — no mesh, no model. Silently chases the player.
+    Phantom,
+}
+
 #[derive(Component)]
 pub struct Enemy {
+    pub enemy_type: EnemyType,
     pub speed: f32,
     pub patrol_points: Vec<Vec3>,
     pub current_waypoint: usize,
@@ -14,7 +24,7 @@ pub struct Enemy {
 
 #[derive(Component)]
 pub struct EnemyAnimation {
-    pub start_node: AnimationNodeIndex,
+    pub anim_node: AnimationNodeIndex,
 }
 
 #[derive(Component)]
@@ -22,20 +32,24 @@ pub struct EnemyAnimationPlayerLink(pub Entity);
 
 #[derive(Resource, Default)]
 pub struct EnemyAnimationAssets {
-    pub gltf_handle: Handle<Gltf>,
-    pub graph_handle: Option<Handle<AnimationGraph>>,
-    pub start_node: Option<AnimationNodeIndex>,
+    pub scorcher_gltf: Handle<Gltf>,
+    pub worm_gltf: Handle<Gltf>,
+    pub scorcher_graph: Option<Handle<AnimationGraph>>,
+    pub scorcher_node: Option<AnimationNodeIndex>,
+    pub worm_graph: Option<Handle<AnimationGraph>>,
+    pub worm_node: Option<AnimationNodeIndex>,
 }
 
 pub fn setup_enemy_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let gltf_handle = asset_server.load("models/scorcher_enemy.glb");
+    let scorcher_gltf = asset_server.load("models/scorcher_enemy.glb");
+    let worm_gltf = asset_server.load("models/sign_enemy.glb");
     commands.insert_resource(EnemyAnimationAssets {
-        gltf_handle,
-        graph_handle: None,
-        start_node: None,
+        scorcher_gltf,
+        worm_gltf,
+        ..default()
     });
 }
 
@@ -44,31 +58,35 @@ pub fn process_enemy_assets(
     gltfs: Res<Assets<Gltf>>,
     mut graphs: ResMut<Assets<AnimationGraph>>,
 ) {
-    if assets.graph_handle.is_none() {
-        if let Some(gltf) = gltfs.get(&assets.gltf_handle) {
-            // Log all available animations to help debug
-            let names: Vec<_> = gltf.named_animations.keys().collect();
-            info!("Available animations in scorcher_enemy.glb: {:?}", names);
+    // Process Scorcher
+    if assets.scorcher_graph.is_none() {
+        if let Some(gltf) = gltfs.get(&assets.scorcher_gltf) {
+            let clip = gltf.named_animations.get("start")
+                .or_else(|| gltf.named_animations.get("Start"))
+                .or_else(|| gltf.animations.first())
+                .cloned();
 
-            let start_clip = if let Some(clip) = gltf.named_animations.get("start") {
-                info!("Found 'start' animation");
-                Some(clip.clone())
-            } else if let Some(clip) = gltf.named_animations.get("Start") {
-                info!("Found 'Start' animation");
-                Some(clip.clone())
-            } else if let Some(clip) = gltf.animations.first() {
-                warn!("No 'start' or 'Start' animation found, using first available");
-                Some(clip.clone())
-            } else {
-                error!("No animations found in scorcher_enemy.glb");
-                None
-            };
-
-            if let Some(clip) = start_clip {
+            if let Some(clip) = clip {
                 let mut graph = AnimationGraph::new();
-                let start_node = graph.add_clip(clip, 1.0, graph.root);
-                assets.graph_handle = Some(graphs.add(graph));
-                assets.start_node = Some(start_node);
+                let node = graph.add_clip(clip, 1.0, graph.root);
+                assets.scorcher_graph = Some(graphs.add(graph));
+                assets.scorcher_node = Some(node);
+            }
+        }
+    }
+
+    // Process Worm (using sign_enemy.glb now)
+    if assets.worm_graph.is_none() {
+        if let Some(gltf) = gltfs.get(&assets.worm_gltf) {
+            info!("Sign Enemy GLTF loaded. Animations: {}, Scenes: {}", gltf.animations.len(), gltf.scenes.len());
+            // Trying animation index 2 if available, fallback to first
+            let clip = gltf.animations.get(2).cloned().or_else(|| gltf.animations.first().cloned());
+
+            if let Some(clip) = clip {
+                let mut graph = AnimationGraph::new();
+                let node = graph.add_clip(clip, 1.0, graph.root);
+                assets.worm_graph = Some(graphs.add(graph));
+                assets.worm_node = Some(node);
             }
         }
     }
@@ -81,29 +99,34 @@ pub fn init_enemy_animations(
     children_query: Query<&Children>,
     anim_player_query: Query<Entity, With<AnimationPlayer>>,
 ) {
-    let (Some(graph_handle), Some(start_node)) = (assets.graph_handle.as_ref(), assets.start_node) else {
-        return;
-    };
-    
-    for (enemy_entity, _) in &enemy_query {
-        for descendant in children_query.iter_descendants(enemy_entity) {
-            if anim_player_query.get(descendant).is_ok() {
-                info!("Linking animation to enemy entity {:?}", enemy_entity);
-                
-                commands.entity(descendant).insert((
-                    AnimationGraphHandle(graph_handle.clone()),
-                    AnimationTransitions::default(),
-                ));
-                
-                commands.entity(enemy_entity).insert((
-                    EnemyAnimationPlayerLink(descendant),
-                    EnemyAnimation {
-                        start_node,
-                    },
-                ));
-                
-                info!("Enemy animation components assigned");
-                break;
+    for (enemy_entity, enemy) in &enemy_query {
+        // Phantoms have no model/animations — skip them entirely.
+        if enemy.enemy_type == EnemyType::Phantom {
+            continue;
+        }
+
+        let (graph_handle, node) = match enemy.enemy_type {
+            EnemyType::Scorcher => (assets.scorcher_graph.as_ref(), assets.scorcher_node),
+            EnemyType::Worm => (assets.worm_graph.as_ref(), assets.worm_node),
+            EnemyType::Phantom => unreachable!(),
+        };
+
+        if let (Some(graph_handle), Some(node)) = (graph_handle, node) {
+            for descendant in children_query.iter_descendants(enemy_entity) {
+                if anim_player_query.get(descendant).is_ok() {
+                    commands.entity(descendant).insert((
+                        AnimationGraphHandle(graph_handle.clone()),
+                        AnimationTransitions::default(),
+                    ));
+                    
+                    commands.entity(enemy_entity).insert((
+                        EnemyAnimationPlayerLink(descendant),
+                        EnemyAnimation {
+                            anim_node: node,
+                        },
+                    ));
+                    break;
+                }
             }
         }
     }
@@ -115,9 +138,8 @@ pub fn play_enemy_animations(
 ) {
     for (link, anim) in &enemy_query {
         if let Ok((mut player, mut transitions)) = anim_player_query.get_mut(link.0) {
-            // Only call play if we are not already playing/transitioning to this node
-            if !player.is_playing_animation(anim.start_node) {
-                transitions.play(&mut player, anim.start_node, std::time::Duration::from_millis(200)).repeat();
+            if !player.is_playing_animation(anim.anim_node) {
+                transitions.play(&mut player, anim.anim_node, std::time::Duration::from_millis(200)).repeat();
             }
         }
     }
@@ -125,25 +147,55 @@ pub fn play_enemy_animations(
 
 pub fn move_enemies(
     time: Res<Time>,
-    mut enemy_query: Query<(&mut Transform, &mut Enemy)>,
+    player_query: Query<&Transform, With<Player>>,
+    mut enemy_query: Query<(&mut Transform, &mut Enemy), Without<Player>>,
 ) {
     let dt = time.delta_secs();
+    let player_pos = player_query.iter().next().map(|t| t.translation).unwrap_or(Vec3::ZERO);
+
     for (mut transform, mut enemy) in &mut enemy_query {
-        if enemy.patrol_points.is_empty() {
-            continue;
-        }
-        let target = enemy.patrol_points[enemy.current_waypoint];
-        let diff = target - transform.translation;
+        let target_pos = match enemy.enemy_type {
+            EnemyType::Scorcher => {
+                if enemy.patrol_points.is_empty() {
+                    continue;
+                }
+                enemy.patrol_points[enemy.current_waypoint]
+            }
+            // Worm and Phantom both chase the player.
+            EnemyType::Worm | EnemyType::Phantom => player_pos,
+        };
+
+        let diff = target_pos - transform.translation;
         let dist = diff.length();
 
-        if dist < 0.2 {
-            enemy.current_waypoint = (enemy.current_waypoint + 1) % enemy.patrol_points.len();
-        } else {
-            let dir = diff.normalize();
-            transform.translation += dir * enemy.speed * 2.0 * dt; // Scaled speed
-            
-            let target_rotation = Quat::from_rotation_y(f32::atan2(dir.x, dir.z));
-            transform.rotation = transform.rotation.slerp(target_rotation, 0.1);
+        match enemy.enemy_type {
+            EnemyType::Scorcher => {
+                if dist < 0.2 {
+                    enemy.current_waypoint = (enemy.current_waypoint + 1) % enemy.patrol_points.len();
+                } else {
+                    let dir = diff.normalize();
+                    transform.translation += dir * enemy.speed * 2.0 * dt;
+                    let target_rotation = Quat::from_rotation_y(f32::atan2(dir.x, dir.z));
+                    transform.rotation = transform.rotation.slerp(target_rotation, 0.1);
+                }
+            }
+            // Worm and Phantom share the same XZ-only chase logic.
+            // Phantom is faster (speed 3.5 vs 2.0) but otherwise identical.
+            EnemyType::Worm | EnemyType::Phantom => {
+                if dist > 0.5 {
+                    let diff_xz = Vec3::new(
+                        target_pos.x - transform.translation.x,
+                        0.0,
+                        target_pos.z - transform.translation.z,
+                    );
+                    if diff_xz.length() > 0.1 {
+                        let dir = diff_xz.normalize();
+                        transform.translation += dir * enemy.speed * dt;
+                        let target_rotation = Quat::from_rotation_y(f32::atan2(dir.x, dir.z));
+                        transform.rotation = transform.rotation.slerp(target_rotation, 0.1);
+                    }
+                }
+            }
         }
     }
 }
@@ -179,9 +231,6 @@ pub fn check_enemy_player_collision(
     mut player_query: Query<(&mut Transform, &mut Player), Without<Enemy>>,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
-    let player_radius = 0.4;
-    let enemy_radius = 0.4;
-    
     for (mut player_transform, mut player) in &mut player_query {
         if player.invulnerable_timer > 0.0 || player.shield_timer > 0.0 {
             continue;
@@ -197,8 +246,8 @@ pub fn check_enemy_player_collision(
             let y_diff = (player_pos.y - enemy_pos.y).abs();
             
             if xz_dist < 1.2 && y_diff < 4.0 {
-                if player.health > 0 {
-                    player.health -= 1;
+                if player.health > 0.0 {
+                    player.health -= 1.5;
                     info!("!!! PLAYER DAMAGED !!! Health: {}", player.health);
                 }
                 player.invulnerable_timer = 1.5;
@@ -209,6 +258,17 @@ pub fn check_enemy_player_collision(
                 player_transform.translation += push_dir * 2.0;
                 break;
             }
+        }
+    }
+}
+
+pub fn check_player_death(
+    player_query: Query<&Player>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    if let Some(player) = player_query.iter().next() {
+        if player.health <= 0.0 {
+            next_state.set(GameState::GameOver);
         }
     }
 }

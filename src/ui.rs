@@ -119,8 +119,56 @@ pub fn update_ui(
 
         // Update health bar
         if let Some(mut bar_node) = bar_query.iter_mut().next() {
-            let percentage = (player.health as f32 / player.max_health as f32) * 100.0;
+            let percentage = (player.health / player.max_health) * 100.0;
             bar_node.width = Val::Percent(percentage.max(0.0));
         }
+    }
+}
+
+#[derive(Component)]
+pub struct DeathScreen;
+
+pub fn setup_death_screen(mut commands: Commands) {
+    commands.spawn((
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            position_type: PositionType::Absolute,
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            row_gap: Val::Px(20.0),
+            ..default()
+        },
+        BackgroundColor(Color::srgb(0.2, 0.0, 0.0).with_alpha(0.9)),
+        DeathScreen,
+        GlobalZIndex(100),
+    )).with_children(|parent| {
+        parent.spawn((
+            Text::new("HAS MUERTO"),
+            TextFont { font_size: 80.0, ..default() },
+            TextColor(Color::srgb(1.0, 0.0, 0.0)),
+        ));
+
+        parent.spawn((
+            Text::new("PRESIONA ESPACIO PARA REINTENTAR"),
+            TextFont { font_size: 30.0, ..default() },
+            TextColor(Color::WHITE),
+        ));
+    });
+}
+
+pub fn cleanup_death_screen(mut commands: Commands, query: Query<Entity, With<DeathScreen>>) {
+    for entity in &query {
+        commands.entity(entity).despawn();
+    }
+}
+
+pub fn death_screen_action(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<crate::GameState>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        next_state.set(crate::GameState::Playing);
     }
 }
