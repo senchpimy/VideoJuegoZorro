@@ -25,6 +25,17 @@ pub enum GameState {
     GameOver,
 }
 
+#[derive(Resource)]
+pub struct UiAudioAssets {
+    pub click: Handle<AudioSource>,
+    pub death: Handle<AudioSource>,
+    pub revive: Handle<AudioSource>,
+    pub damage: Handle<AudioSource>,
+    pub enemy_death: Handle<AudioSource>,
+    pub steps: Handle<AudioSource>,
+    pub music: Handle<AudioSource>,
+}
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -40,6 +51,7 @@ fn main() {
         }))
         .add_plugins(PhysicsPlugins::default())
         .init_state::<GameState>()
+        .add_systems(Startup, setup_ui_audio)
         // Global Startup
         .add_systems(Startup, camera::spawn_camera)
         
@@ -107,14 +119,41 @@ fn toggle_pause(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
+    mut commands: Commands,
+    audio_assets: Res<UiAudioAssets>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Escape) {
+        commands.spawn(AudioPlayer(audio_assets.click.clone()));
         match state.get() {
             GameState::Playing => next_state.set(GameState::Paused),
             GameState::Paused => next_state.set(GameState::Playing),
             _ => {}
         }
     }
+}
+
+fn setup_ui_audio(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let music = asset_server.load("audio/fondo.mp3");
+    
+    // Spawn background music: Looping, lower volume (0.2)
+    commands.spawn((
+        AudioPlayer(music.clone()),
+        PlaybackSettings {
+            mode: bevy::audio::PlaybackMode::Loop,
+            volume: bevy::audio::Volume::Linear(0.2),
+            ..default()
+        },
+    ));
+
+    commands.insert_resource(UiAudioAssets {
+        click: asset_server.load("audio/click.mp3"),
+        death: asset_server.load("audio/muerte.mp3"),
+        revive: asset_server.load("audio/revive.mp3"),
+        damage: asset_server.load("audio/dano.mp3"),
+        enemy_death: asset_server.load("audio/enemigo_muerte.mp3"),
+        steps: asset_server.load("audio/pasos.mp3"),
+        music,
+    });
 }
 
 pub fn exit_game(mut app_exit_events: MessageWriter<AppExit>) {

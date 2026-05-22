@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::player::Player;
 use crate::projectile::Projectile;
-use crate::GameState;
+use crate::{GameState, UiAudioAssets};
 
 use bevy::gltf::Gltf;
 
@@ -222,6 +222,8 @@ pub fn check_enemy_projectile_collision(
     mut commands: Commands,
     mut enemy_query: Query<(Entity, &Transform, &mut Enemy)>,
     projectile_query: Query<(Entity, &Transform), With<Projectile>>,
+    audio_assets: Res<UiAudioAssets>,
+    mut player_query: Query<&mut Player>,
 ) {
     let enemy_radius = 1.0; // Generous radius so hits feel responsive
     let proj_radius = 0.3;
@@ -239,6 +241,13 @@ pub fn check_enemy_projectile_collision(
                 commands.entity(proj_entity).despawn();
                 // Destroy the enemy
                 commands.entity(enemy_entity).despawn();
+                // Play death sound
+                commands.spawn(AudioPlayer(audio_assets.enemy_death.clone()));
+                
+                // Award points to the player
+                if let Ok(mut player) = player_query.single_mut() {
+                    player.score += 100;
+                }
                 break;
             }
         }
@@ -248,6 +257,8 @@ pub fn check_enemy_projectile_collision(
 pub fn check_enemy_player_collision(
     mut player_query: Query<(&mut Transform, &mut Player), Without<Enemy>>,
     enemy_query: Query<&Transform, With<Enemy>>,
+    mut commands: Commands,
+    audio_assets: Res<UiAudioAssets>,
 ) {
     for (mut player_transform, mut player) in &mut player_query {
         if player.invulnerable_timer > 0.0 || player.shield_timer > 0.0 {
@@ -267,6 +278,8 @@ pub fn check_enemy_player_collision(
                 if player.health > 0.0 {
                     player.health -= 1.5;
                     info!("!!! PLAYER DAMAGED !!! Health: {}", player.health);
+                    // Play damage sound
+                    commands.spawn(AudioPlayer(audio_assets.damage.clone()));
                 }
                 player.invulnerable_timer = 1.5;
                 
@@ -283,9 +296,12 @@ pub fn check_enemy_player_collision(
 pub fn check_player_death(
     player_query: Query<&Player>,
     mut next_state: ResMut<NextState<GameState>>,
+    mut commands: Commands,
+    audio_assets: Res<UiAudioAssets>,
 ) {
     if let Some(player) = player_query.iter().next() {
         if player.health <= 0.0 {
+            commands.spawn(AudioPlayer(audio_assets.death.clone()));
             next_state.set(GameState::GameOver);
         }
     }

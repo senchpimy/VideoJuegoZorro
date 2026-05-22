@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use crate::player::Player;
+use crate::UiAudioAssets;
 
 #[derive(Component)]
 pub struct HealthBar;
@@ -167,8 +168,11 @@ pub fn cleanup_death_screen(mut commands: Commands, query: Query<Entity, With<De
 pub fn death_screen_action(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut next_state: ResMut<NextState<crate::GameState>>,
+    mut commands: Commands,
+    audio_assets: Res<UiAudioAssets>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
+        commands.spawn(AudioPlayer(audio_assets.revive.clone()));
         next_state.set(crate::GameState::Playing);
     }
 }

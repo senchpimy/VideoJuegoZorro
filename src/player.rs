@@ -4,6 +4,7 @@ use crate::maze::terrain_height;
 use crate::platform::MovingPlatform;
 use avian3d::prelude::{RigidBody, Collider, LinearVelocity, AngularVelocity};
 use crate::tutorial::PhysicsCube;
+use crate::UiAudioAssets;
 
 #[derive(Component)]
 pub struct Player {

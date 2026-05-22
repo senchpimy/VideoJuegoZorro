@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::GameState;
+use crate::{GameState, UiAudioAssets};
 
 #[derive(Component)]
 pub struct OnMenuScreen;
@@ -60,9 +60,12 @@ pub fn setup_menu(mut commands: Commands) {
 pub fn menu_action(
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>)>,
     mut next_state: ResMut<NextState<GameState>>,
+    mut commands: Commands,
+    audio_assets: Res<UiAudioAssets>,
 ) {
     for interaction in &interaction_query {
         if *interaction == Interaction::Pressed {
+            commands.spawn(AudioPlayer(audio_assets.click.clone()));
             next_state.set(GameState::Playing);
         }
     }

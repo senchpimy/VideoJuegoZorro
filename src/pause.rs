@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::GameState;
+use crate::{GameState, UiAudioAssets};
 use bevy::app::AppExit;
 
 #[derive(Component)]
@@ -97,9 +97,12 @@ pub fn pause_action(
     interaction_query: Query<(&Interaction, &PauseButtonAction), (Changed<Interaction>, With<Button>)>,
     mut next_state: ResMut<NextState<GameState>>,
     mut app_exit_events: MessageWriter<AppExit>,
+    mut commands: Commands,
+    audio_assets: Res<UiAudioAssets>,
 ) {
     for (interaction, action) in &interaction_query {
         if *interaction == Interaction::Pressed {
+            commands.spawn(AudioPlayer(audio_assets.click.clone()));
             match action {
                 PauseButtonAction::Resume => next_state.set(GameState::Playing),
                 PauseButtonAction::Quit => {
