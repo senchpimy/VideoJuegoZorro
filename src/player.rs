@@ -106,7 +106,13 @@ fn can_move_cube(
     direction: Vec3,
     cube_query: &Query<(Entity, &Transform, &PhysicsCube), Without<Player>>,
     wall_query: &Query<(&Transform, &Wall), (With<Wall>, Without<Player>)>,
+    visited: &mut Vec<Entity>,
 ) -> bool {
+    if visited.contains(&cube_entity) {
+        return true; 
+    }
+    visited.push(cube_entity);
+
     let Ok((_, cube_transform, _)) = cube_query.get(cube_entity) else {
         return false;
     };
@@ -130,7 +136,7 @@ fn can_move_cube(
 
         if collision_x && collision_z && collision_y {
             // Recursively check if the other cube can move in the same direction
-            if !can_move_cube(other_entity, direction, cube_query, wall_query) {
+            if !can_move_cube(other_entity, direction, cube_query, wall_query, visited) {
                 return false;
             }
         }
@@ -264,7 +270,8 @@ pub fn player_movement(
 
                         if dx.abs() < limit_x && dz.abs() < limit_z && dy.abs() < limit_y {
                             // Check if this cube can move in dir_x
-                            let can_push = can_move_cube(cube_entity, dir_x, &cube_query, &wall_query);
+                            let mut visited = Vec::new();
+                            let can_push = can_move_cube(cube_entity, dir_x, &cube_query, &wall_query, &mut visited);
                             if !can_push {
                                 // Blocked! Stop the player completely (0.01 max penetration)
                                 let allowed_dist = limit_x - 0.01;
@@ -304,7 +311,8 @@ pub fn player_movement(
 
                         if dx.abs() < limit_x && dz.abs() < limit_z && dy.abs() < limit_y {
                             // Check if this cube can move in dir_z
-                            let can_push = can_move_cube(cube_entity, dir_z, &cube_query, &wall_query);
+                            let mut visited = Vec::new();
+                            let can_push = can_move_cube(cube_entity, dir_z, &cube_query, &wall_query, &mut visited);
                             if !can_push {
                                 // Blocked! Stop the player completely (0.01 max penetration)
                                 let allowed_dist = limit_z - 0.01;
