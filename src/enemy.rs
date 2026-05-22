@@ -205,22 +205,22 @@ pub fn check_enemy_projectile_collision(
     mut enemy_query: Query<(Entity, &Transform, &mut Enemy)>,
     projectile_query: Query<(Entity, &Transform), With<Projectile>>,
 ) {
-    let enemy_radius = 0.4;
+    let enemy_radius = 1.0; // Generous radius so hits feel responsive
     let proj_radius = 0.3;
 
-    for (enemy_entity, enemy_transform, mut enemy) in &mut enemy_query {
+    for (enemy_entity, enemy_transform, _enemy) in &mut enemy_query {
         let enemy_pos = enemy_transform.translation;
         for (proj_entity, proj_transform) in &projectile_query {
             let proj_pos = proj_transform.translation;
-            let dist = enemy_pos.distance(proj_pos);
+            
+            // Check XZ horizontal distance to ignore floating/vertical offsets
+            let xz_dist = Vec2::new(enemy_pos.x, enemy_pos.z).distance(Vec2::new(proj_pos.x, proj_pos.z));
 
-            if dist < (enemy_radius + proj_radius) {
+            if xz_dist < (enemy_radius + proj_radius) {
+                // Destroy the projectile
                 commands.entity(proj_entity).despawn();
-
-                enemy.health -= 1.0;
-                if enemy.health <= 0.0 {
-                    commands.entity(enemy_entity).despawn();
-                }
+                // Destroy the enemy
+                commands.entity(enemy_entity).despawn();
                 break;
             }
         }
