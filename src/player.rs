@@ -328,13 +328,17 @@ pub fn player_movement(
             
             if let Some(link) = anim_link {
                 if let Ok((mut anim_player, mut transitions)) = anim_player_query.get_mut(link.0) {
-                    transitions.play(&mut anim_player, anim.walk_node, std::time::Duration::from_millis(200)).repeat();
+                    if !anim_player.is_playing_animation(anim.walk_node) {
+                        transitions.play(&mut anim_player, anim.walk_node, std::time::Duration::from_millis(200)).repeat();
+                    }
                 }
             }
         } else {
             if let Some(link) = anim_link {
                 if let Ok((mut anim_player, mut transitions)) = anim_player_query.get_mut(link.0) {
-                    transitions.play(&mut anim_player, anim.idle_node, std::time::Duration::from_millis(200)).repeat();
+                    if !anim_player.is_playing_animation(anim.idle_node) {
+                        transitions.play(&mut anim_player, anim.idle_node, std::time::Duration::from_millis(200)).repeat();
+                    }
                 }
             }
         }

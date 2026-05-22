@@ -6,27 +6,37 @@ use bevy::prelude::*;
 use avian3d::prelude::{RigidBody, Collider};
 
 // 1 = Wall, 0 = Empty, 2 = Player Start, 3 = Moving Platform Pit (Removed), 4 = Lava Static Pit, 5 = Enemy Spawn, 6 = Chest, 7 = Speed Gem, 8 = Shield Gem, 9 = Healing Gem, 11 = Phantom (Invisible Enemy)
-pub const MAZE_DATA: [[u8; 20]; 20] = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 7, 0, 0, 0, 0, 9, 1],
-    [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1],
-    [1, 0, 4, 0, 0, 0, 1, 8, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 1],
-    [1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1],
-    [1, 0, 1, 0, 9, 0, 0, 0, 1, 0,11, 0, 0, 0, 1, 0, 7, 0, 0, 1],
-    [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 1, 0, 7, 0, 0, 0, 0, 0, 1, 7, 1, 0, 0, 0, 0, 1],
-    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1],
-    [1, 0, 8, 5, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9, 1],
-    [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1],
-    [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9, 0, 0, 6, 1, 0, 7, 0, 0, 1],
-    [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1],
-    [1, 7, 0, 0, 5, 0, 0, 8, 0, 0, 5, 0, 0, 0, 0, 0, 0, 1, 0, 1],
-    [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1],
-    [1, 0, 8, 0, 0, 9, 0, 0, 0, 5, 0, 0, 0, 7, 0,11, 0, 1, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 7, 0, 0, 0, 1, 0, 1, 0, 0, 0, 8, 0, 0, 0, 0, 1],
-    [1, 9, 0, 5, 0, 0, 7, 0, 0,11, 0, 0, 5, 0, 0, 8, 0,11, 9, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+pub const MAZE_DATA: [[u8; 30]; 30] = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 7, 0, 0, 0, 0, 9, 1, 0, 0, 0, 5, 0, 0, 0, 7, 0, 1],
+    [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1],
+    [1, 0, 4, 0, 0, 0, 1, 8, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1],
+    [1, 0, 1, 0, 9, 0, 0, 0, 1, 0,11, 0, 0, 0, 1, 0, 7, 0, 0, 1, 0, 1, 9, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 1, 0, 7, 0, 0, 0, 0, 0, 1, 7, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 5, 0, 0, 0, 0, 1],
+    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1],
+    [1, 0, 8, 5, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9, 1, 0, 0, 0, 0, 0, 0, 1, 0, 8, 1],
+    [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9, 0, 0, 6, 1, 0, 7, 0, 0, 1, 0, 1, 7, 0, 1, 0, 0, 0, 0, 1],
+    [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1],
+    [1, 7, 0, 0, 5, 0, 0, 8, 0, 0, 5, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 5, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1],
+    [1, 0, 8, 0, 0, 9, 0, 0, 0, 5, 0, 0, 0, 7, 0,11, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1],
+    [1, 0, 0, 0, 7, 0, 0, 0, 1, 0, 1, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1],
+    [1, 9, 0, 5, 0, 0, 7, 0, 0,11, 0, 0, 5, 0, 0, 8, 0, 1, 9, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 7, 0, 0, 1, 0, 1, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+    [1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 7, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
+    [1, 5, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+    [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 5, 0, 0, 0, 8, 1],
+    [1, 9, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 9, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
 
 #[derive(Component)]
@@ -38,7 +48,7 @@ pub struct WorldTerrain;
 #[derive(Component)]
 pub struct WorldLight;
 
-const WORLD_SIZE: i32 = 80;
+const WORLD_SIZE: i32 = 120;
 pub const MAZE_OFFSET: Vec3 = Vec3::new(70.0, 0.1, 70.0);
 
 pub fn terrain_height(_x: f32, _z: f32) -> f32 {
@@ -71,8 +81,8 @@ pub fn spawn_world(
 
     for z in -WORLD_SIZE..WORLD_SIZE {
         for x in -WORLD_SIZE..WORLD_SIZE {
-            let fx = x as f32 * 2.0;
-            let fz = z as f32 * 2.0;
+            let fx = x as f32 * 4.0;
+            let fz = z as f32 * 4.0;
             let h = terrain_height(fx, fz);
 
             let mat = if h > 8.0 {
@@ -82,7 +92,7 @@ pub fn spawn_world(
             };
 
             commands.spawn((
-                Mesh3d(meshes.add(Plane3d::default().mesh().size(2.0, 2.0))),
+                Mesh3d(meshes.add(Plane3d::default().mesh().size(4.0, 4.0))),
                 MeshMaterial3d(mat),
                 Transform::from_xyz(fx, h, fz),
                 WorldTerrain,
@@ -90,34 +100,34 @@ pub fn spawn_world(
         }
     }
 
-    let pillar_mesh = meshes.add(Cylinder::new(0.2, 4.0));
+    let pillar_mesh = meshes.add(Cylinder::new(0.4, 8.0));
     let pillar_material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.0, 1.0, 1.0),
         emissive: LinearRgba::from_f32_array([0.0, 5.0, 5.0, 1.0]),
         ..default()
     });
 
-    for i in 0..8 {
-        let angle = i as f32 * std::f32::consts::PI / 4.0;
-        let dist = 60.0;
+    for i in 0..12 {
+        let angle = i as f32 * std::f32::consts::PI / 6.0;
+        let dist = 100.0;
         let pos = MAZE_OFFSET + Vec3::new(angle.cos() * dist, 0.0, angle.sin() * dist);
         let h = terrain_height(pos.x, pos.z);
 
         commands.spawn((
             Mesh3d(pillar_mesh.clone()),
             MeshMaterial3d(pillar_material.clone()),
-            Transform::from_xyz(pos.x, h + 2.0, pos.z),
+            Transform::from_xyz(pos.x, h + 4.0, pos.z),
             WorldTerrain,
         ));
 
         commands.spawn((
             PointLight {
                 color: Color::srgb(0.0, 1.0, 1.0),
-                intensity: 100000.0,
-                range: 50.0,
+                intensity: 150000.0,
+                range: 80.0,
                 ..default()
             },
-            Transform::from_xyz(pos.x, h + 5.0, pos.z),
+            Transform::from_xyz(pos.x, h + 10.0, pos.z),
             WorldTerrain,
         ));
     }
@@ -128,7 +138,7 @@ pub fn spawn_world(
             shadows_enabled: false,
             ..default()
         },
-        Transform::from_xyz(50.0, 100.0, 50.0).looking_at(MAZE_OFFSET, Vec3::Y),
+        Transform::from_xyz(100.0, 200.0, 100.0).looking_at(MAZE_OFFSET, Vec3::Y),
         MazeElement,
     ));
 
@@ -155,18 +165,17 @@ fn spawn_maze_at(
         0.1, 0.1, 0.1, 1.0,
     ])));
 
-    let pillar_mesh = meshes.add(Cuboid::new(0.4, 4.0, 0.4));
-    let connector_mesh = meshes.add(Cuboid::new(1.0, 4.0, 0.4)); // For East/West
-    // Note: for North/South we use the same mesh but rotate or swap dimensions
+    let pillar_mesh = meshes.add(Cuboid::new(0.8, 5.0, 0.8));
+    let connector_mesh = meshes.add(Cuboid::new(3.2, 5.0, 0.8)); // For East/West
 
     for (z, row) in MAZE_DATA.iter().enumerate() {
         for (x, &cell) in row.iter().enumerate() {
-            let pos = offset + Vec3::new(x as f32 * 2.0, 0.0, z as f32 * 2.0);
+            let pos = offset + Vec3::new(x as f32 * 4.0, 0.0, z as f32 * 4.0);
 
             // Ground
             if cell != 3 && cell != 4 {
                 commands.spawn((
-                    Mesh3d(meshes.add(Plane3d::default().mesh().size(2.0, 2.0))),
+                    Mesh3d(meshes.add(Plane3d::default().mesh().size(4.0, 4.0))),
                     MeshMaterial3d(ground_material.clone()),
                     Transform::from_translation(pos),
                     MazeElement,
@@ -178,10 +187,10 @@ fn spawn_maze_at(
                 commands.spawn((
                     Mesh3d(pillar_mesh.clone()),
                     MeshMaterial3d(wall_material.clone()),
-                    Transform::from_xyz(pos.x, 2.0, pos.z),
-                    Wall { half_size: Vec3::new(0.2, 2.0, 0.2) },
+                    Transform::from_xyz(pos.x, 2.5, pos.z),
+                    Wall { half_size: Vec3::new(0.4, 2.5, 0.4) },
                     RigidBody::Static,
-                    Collider::cuboid(0.4, 4.0, 0.4),
+                    Collider::cuboid(0.8, 5.0, 0.8),
                     MazeElement,
                 ));
 
@@ -191,24 +200,24 @@ fn spawn_maze_at(
                     commands.spawn((
                         Mesh3d(connector_mesh.clone()),
                         MeshMaterial3d(wall_material.clone()),
-                        Transform::from_xyz(pos.x, 2.0, pos.z - 0.7)
+                        Transform::from_xyz(pos.x, 2.5, pos.z - 2.0)
                             .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
-                        Wall { half_size: Vec3::new(0.2, 2.0, 0.5) },
+                        Wall { half_size: Vec3::new(0.4, 2.5, 1.6) },
                         RigidBody::Static,
-                        Collider::cuboid(1.0, 4.0, 0.4),
+                        Collider::cuboid(3.2, 5.0, 0.8),
                         MazeElement,
                     ));
                 }
                 // South (z+1)
-                if z < 19 && MAZE_DATA[z+1][x] == 1 {
+                if z < 29 && MAZE_DATA[z+1][x] == 1 {
                     commands.spawn((
                         Mesh3d(connector_mesh.clone()),
                         MeshMaterial3d(wall_material.clone()),
-                        Transform::from_xyz(pos.x, 2.0, pos.z + 0.7)
+                        Transform::from_xyz(pos.x, 2.5, pos.z + 2.0)
                             .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
-                        Wall { half_size: Vec3::new(0.2, 2.0, 0.5) },
+                        Wall { half_size: Vec3::new(0.4, 2.5, 1.6) },
                         RigidBody::Static,
-                        Collider::cuboid(1.0, 4.0, 0.4),
+                        Collider::cuboid(3.2, 5.0, 0.8),
                         MazeElement,
                     ));
                 }
@@ -217,22 +226,22 @@ fn spawn_maze_at(
                     commands.spawn((
                         Mesh3d(connector_mesh.clone()),
                         MeshMaterial3d(wall_material.clone()),
-                        Transform::from_xyz(pos.x - 0.7, 2.0, pos.z),
-                        Wall { half_size: Vec3::new(0.5, 2.0, 0.2) },
+                        Transform::from_xyz(pos.x - 2.0, 2.5, pos.z),
+                        Wall { half_size: Vec3::new(1.6, 2.5, 0.4) },
                         RigidBody::Static,
-                        Collider::cuboid(1.0, 4.0, 0.4),
+                        Collider::cuboid(3.2, 5.0, 0.8),
                         MazeElement,
                     ));
                 }
                 // East (x+1)
-                if x < 19 && MAZE_DATA[z][x+1] == 1 {
+                if x < 29 && MAZE_DATA[z][x+1] == 1 {
                     commands.spawn((
                         Mesh3d(connector_mesh.clone()),
                         MeshMaterial3d(wall_material.clone()),
-                        Transform::from_xyz(pos.x + 0.7, 2.0, pos.z),
-                        Wall { half_size: Vec3::new(0.5, 2.0, 0.2) },
+                        Transform::from_xyz(pos.x + 2.0, 2.5, pos.z),
+                        Wall { half_size: Vec3::new(1.6, 2.5, 0.4) },
                         RigidBody::Static,
-                        Collider::cuboid(1.0, 4.0, 0.4),
+                        Collider::cuboid(3.2, 5.0, 0.8),
                         MazeElement,
                     ));
                 }
@@ -240,14 +249,14 @@ fn spawn_maze_at(
 
             if cell == 3 {
                 // Preserved logic
-                let platform_mesh = meshes.add(Cuboid::new(2.0, 0.3, 2.0));
+                let platform_mesh = meshes.add(Cuboid::new(4.0, 0.6, 4.0));
                 let platform_material = materials.add(StandardMaterial {
                     base_color: Color::srgb(0.0, 0.8, 1.0),
                     emissive: LinearRgba::from_f32_array([0.0, 0.4, 0.8, 1.0]),
                     ..default()
                 });
-                let start_pos = pos + Vec3::new(0.0, 0.0, -1.6);
-                let end_pos = pos + Vec3::new(0.0, 0.0, 1.6);
+                let start_pos = pos + Vec3::new(0.0, 0.0, -3.2);
+                let end_pos = pos + Vec3::new(0.0, 0.0, 3.2);
                 commands.spawn((
                     Mesh3d(platform_mesh),
                     MeshMaterial3d(platform_material),
@@ -264,7 +273,7 @@ fn spawn_maze_at(
                 ));
             }
             if cell == 4 {
-                let lava_mesh = meshes.add(Plane3d::default().mesh().size(2.0, 2.0));
+                let lava_mesh = meshes.add(Plane3d::default().mesh().size(4.0, 4.0));
                 let lava_material = materials.add(StandardMaterial {
                     base_color: Color::srgb(0.8, 0.1, 0.0),
                     emissive: LinearRgba::from_f32_array([0.6, 0.05, 0.0, 1.0]),
@@ -279,13 +288,13 @@ fn spawn_maze_at(
             }
             if cell == 5 {
                 let patrol_points = vec![
-                    Vec3::new(pos.x - 3.0, 2.5, pos.z),
-                    Vec3::new(pos.x + 3.0, 2.5, pos.z),
+                    Vec3::new(pos.x - 6.0, 2.5, pos.z),
+                    Vec3::new(pos.x + 6.0, 2.5, pos.z),
                 ];
                 commands.spawn((
                     SceneRoot(asset_server.load("models/scorcher_enemy.glb#Scene0")),
                     Transform::from_translation(Vec3::new(pos.x, 2.5, pos.z))
-                        .with_scale(Vec3::splat(0.012)),
+                        .with_scale(Vec3::splat(0.024)),
                     Enemy {
                         enemy_type: EnemyType::Scorcher,
                         speed: 1.5,
@@ -299,7 +308,7 @@ fn spawn_maze_at(
             if cell == 11 {
                 // Chasing Phantom enemy — represented as a glowing red cube
                 commands.spawn((
-                    Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+                    Mesh3d(meshes.add(Cuboid::new(2.0, 2.0, 2.0))),
                     MeshMaterial3d(materials.add(StandardMaterial {
                         base_color: Color::srgb(1.0, 0.0, 0.0),
                         emissive: LinearRgba::from_f32_array([5.0, 0.0, 0.0, 1.0]),
@@ -318,7 +327,7 @@ fn spawn_maze_at(
             }
 
             if cell == 6 {
-                let chest_mesh = meshes.add(Cuboid::new(1.2, 0.8, 0.8));
+                let chest_mesh = meshes.add(Cuboid::new(2.4, 1.6, 1.6));
                 let chest_material = materials.add(StandardMaterial {
                     base_color: Color::srgb(0.6, 0.3, 0.0),
                     perceptual_roughness: 0.8,
@@ -327,7 +336,7 @@ fn spawn_maze_at(
                 commands.spawn((
                     Mesh3d(chest_mesh),
                     MeshMaterial3d(chest_material),
-                    Transform::from_translation(Vec3::new(pos.x, 0.4, pos.z)),
+                    Transform::from_translation(Vec3::new(pos.x, 0.8, pos.z)),
                     Chest { opened: false },
                     MazeElement,
                 ));
@@ -341,8 +350,8 @@ fn spawn_maze_at(
                 if cell == 7 {
                     commands.spawn((
                         SceneRoot(asset_server.load("models/banana.glb#Scene0")),
-                        Transform::from_translation(Vec3::new(pos.x, 0.5, pos.z))
-                            .with_scale(Vec3::splat(0.25)),
+                        Transform::from_translation(Vec3::new(pos.x, 1.0, pos.z))
+                            .with_scale(Vec3::splat(0.5)),
                         PowerUpItem {
                             effect_type: effect,
                         },
@@ -351,15 +360,15 @@ fn spawn_maze_at(
                 } else if cell == 9 {
                     commands.spawn((
                         SceneRoot(asset_server.load("models/apple.glb#Scene0")),
-                        Transform::from_translation(Vec3::new(pos.x, 0.5, pos.z))
-                            .with_scale(Vec3::splat(0.25)),
+                        Transform::from_translation(Vec3::new(pos.x, 1.0, pos.z))
+                            .with_scale(Vec3::splat(0.5)),
                         PowerUpItem {
                             effect_type: effect,
                         },
                         MazeElement,
                     ));
                 } else {
-                    let gem_mesh = meshes.add(Sphere::new(0.36).mesh());
+                    let gem_mesh = meshes.add(Sphere::new(0.72).mesh());
                     let gem_material = materials.add(StandardMaterial {
                         base_color: color,
                         emissive: LinearRgba::from_f32_array(match cell {
@@ -372,7 +381,7 @@ fn spawn_maze_at(
                     commands.spawn((
                         Mesh3d(gem_mesh),
                         MeshMaterial3d(gem_material),
-                        Transform::from_translation(Vec3::new(pos.x, 0.7, pos.z)),
+                        Transform::from_translation(Vec3::new(pos.x, 1.4, pos.z)),
                         PowerUpItem {
                             effect_type: effect,
                         },
