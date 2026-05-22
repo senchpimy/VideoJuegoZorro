@@ -37,7 +37,13 @@ fn main() {
         .add_systems(OnExit(GameState::Menu), menu::cleanup_menu)
 
         // Playing State
-        .add_systems(OnEnter(GameState::Playing), (maze::spawn_world, tutorial::spawn_tutorial, player::spawn_player, ui::setup_ui))
+        .add_systems(OnEnter(GameState::Playing), (
+            maze::spawn_world, 
+            tutorial::spawn_tutorial, 
+            player::spawn_player, 
+            ui::setup_ui,
+            enemy::setup_enemy_assets,
+        ))
         .add_systems(Update, (
             player::link_player_animations.run_if(in_state(GameState::Playing)),
             player::player_movement.run_if(in_state(GameState::Playing)),
@@ -45,6 +51,9 @@ fn main() {
             platform::move_platforms.run_if(in_state(GameState::Playing)),
             projectile::player_fire.run_if(in_state(GameState::Playing)),
             projectile::update_projectiles.run_if(in_state(GameState::Playing)),
+            enemy::process_enemy_assets.run_if(in_state(GameState::Playing)),
+            enemy::init_enemy_animations.run_if(in_state(GameState::Playing)),
+            enemy::play_enemy_animations.run_if(in_state(GameState::Playing)),
             enemy::move_enemies.run_if(in_state(GameState::Playing)),
             enemy::check_enemy_projectile_collision.run_if(in_state(GameState::Playing)),
             enemy::check_enemy_player_collision.run_if(in_state(GameState::Playing)),
