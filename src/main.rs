@@ -14,6 +14,7 @@ mod tutorial;
 use bevy::prelude::*;
 use bevy::app::AppExit;
 use bevy::asset::AssetMetaCheck;
+use bevy::window::{CursorGrabMode, CursorOptions};
 use avian3d::prelude::*;
 
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
@@ -91,10 +92,13 @@ fn main() {
             tutorial::spawn_physics_cubes.run_if(in_state(GameState::Playing)),
             tutorial::update_physics_cubes.run_if(in_state(GameState::Playing)),
             tutorial::check_portal_teleport.run_if(in_state(GameState::Playing)),
+        ))
+        .add_systems(Update, (
             ui::update_ui.run_if(in_state(GameState::Playing)),
+            maze::check_puzzle_completion.run_if(in_state(GameState::Playing)),
             camera::camera_follow.run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
             toggle_pause.run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
-            maze::check_puzzle_completion.run_if(in_state(GameState::Playing)),
+            handle_cursor_grab,
         ))
         .add_systems(OnExit(GameState::Playing), (
             maze::cleanup_world,
@@ -120,6 +124,21 @@ fn main() {
         .add_systems(OnExit(GameState::GameWon), ui::cleanup_win_screen)
 
         .run();
+}
+
+fn handle_cursor_grab(
+    mut cursor_options: Query<&mut CursorOptions>,
+    state: Res<State<GameState>>,
+) {
+    if let Some(mut options) = cursor_options.iter_mut().next() {
+        if *state.get() == GameState::Playing {
+            options.grab_mode = CursorGrabMode::Locked;
+            options.visible = false;
+        } else {
+            options.grab_mode = CursorGrabMode::None;
+            options.visible = true;
+        }
+    }
 }
 
 fn toggle_pause(

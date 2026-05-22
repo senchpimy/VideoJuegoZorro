@@ -5,6 +5,7 @@ use crate::platform::MovingPlatform;
 use avian3d::prelude::{RigidBody, Collider, LinearVelocity, AngularVelocity};
 use crate::tutorial::PhysicsCube;
 use crate::UiAudioAssets;
+use crate::camera::MainCamera;
 
 #[derive(Component)]
 pub struct Player {
@@ -53,8 +54,8 @@ pub fn spawn_player(
     let start_pos = crate::tutorial::TUTORIAL_OFFSET + Vec3::new(0.0, 1.0, 0.0);
 
     // Load animations
-    let walk_anim = asset_server.load(GltfAssetLabel::Animation(1).from_asset("models/fox.glb"));
-    let idle_anim = asset_server.load(GltfAssetLabel::Animation(0).from_asset("models/fox.glb"));
+    let walk_anim = asset_server.load("models/fox.glb#Animation1");
+    let idle_anim = asset_server.load("models/fox.glb#Animation0");
     
     let mut graph = AnimationGraph::new();
     let idle_node = graph.add_clip(idle_anim, 1.0, graph.root); 
@@ -155,8 +156,23 @@ pub fn player_movement(
     platform_query: Query<(&Transform, &MovingPlatform), Without<Player>>,
     cube_query: Query<(Entity, &Transform, &PhysicsCube), Without<Player>>,
     mut cube_velocity_query: Query<&mut LinearVelocity, With<PhysicsCube>>,
+    camera_query: Query<&MainCamera>,
 ) {
     let dt = time.delta_secs();
+    
+    // Derive movement vectors from the camera yaw angle stored in MainCamera.
+    // This avoids a borrow conflict with camera_follow (which mutably borrows the camera Transform).
+    let (camera_forward, camera_right) = if let Some(cam) = camera_query.iter().next() {
+        let yaw = cam.yaw;
+        // Forward = direction the camera is facing horizontally (into the scene)
+        let fwd = Vec3::new(-yaw.sin(), 0.0, -yaw.cos());
+        // Right = 90° clockwise from forward
+        let right = Vec3::new(yaw.cos(), 0.0, -yaw.sin());
+        (fwd.normalize_or_zero(), right.normalize_or_zero())
+    } else {
+        (-Vec3::Z, Vec3::X)
+    };
+
     for (mut player_transform, mut player, anim, anim_link) in &mut player_query {
         if player.invulnerable_timer > 0.0 {
             player.invulnerable_timer -= dt;
@@ -180,10 +196,10 @@ pub fn player_movement(
 
         let mut direction = Vec3::ZERO;
 
-        if keyboard_input.pressed(KeyCode::KeyW) { direction.z -= 1.0; }
-        if keyboard_input.pressed(KeyCode::KeyS) { direction.z += 1.0; }
-        if keyboard_input.pressed(KeyCode::KeyA) { direction.x -= 1.0; }
-        if keyboard_input.pressed(KeyCode::KeyD) { direction.x += 1.0; }
+        if keyboard_input.pressed(KeyCode::KeyW) { direction += camera_forward; }
+        if keyboard_input.pressed(KeyCode::KeyS) { direction -= camera_forward; }
+        if keyboard_input.pressed(KeyCode::KeyA) { direction -= camera_right; }
+        if keyboard_input.pressed(KeyCode::KeyD) { direction += camera_right; }
 
         let mut speed = 8.0;
         if player.speed_boost_timer > 0.0 {
