@@ -32,18 +32,6 @@ pub fn spawn_tutorial(
         TimerMode::Repeating,
     )));
 
-    // DEBUG: red cube right next to player spawn to test visibility
-    commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(1.5, 1.5, 1.5))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgb(1.0, 0.0, 0.0),
-            emissive: LinearRgba::from_f32_array([8.0, 0.0, 0.0, 1.0]),
-            ..default()
-        })),
-        Transform::from_translation(TUTORIAL_OFFSET + Vec3::new(3.0, 1.5, 0.0)),
-        TutorialElement,
-    ));
-
     // Phantom enemy in tutorial area — red cube model to test chasing logic
     let room3_pos = TUTORIAL_OFFSET + Vec3::new(0.0, 0.0, -40.0);
     commands.spawn((
@@ -135,20 +123,6 @@ pub fn spawn_tutorial(
         TutorialElement,
     ));
 
-    // WORM ENEMY in Tutorial (Room 3)
-    commands.spawn((
-        SceneRoot(asset_server.load("models/sign_enemy.glb#Scene0")),
-        Transform::from_translation(room3_pos + Vec3::new(4.0, 2.5, -4.0))
-            .with_scale(Vec3::splat(0.012)),
-        Enemy {
-             enemy_type: EnemyType::Worm,
-             speed: 1.0, // Slow follow for tutorial
-             patrol_points: vec![],
-             current_waypoint: 0,
-             health: 1.0,
-         },
-        TutorialElement,
-     ));
 
 
     // ROOM 4: POWERUPS
