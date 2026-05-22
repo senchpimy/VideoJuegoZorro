@@ -13,6 +13,7 @@ mod tutorial;
 
 use bevy::prelude::*;
 use bevy::app::AppExit;
+use bevy::asset::AssetMetaCheck;
 use avian3d::prelude::*;
 
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
@@ -26,7 +27,17 @@ pub enum GameState {
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                canvas: Some("#bevy".to_string()),
+                fit_canvas_to_parent: true,
+                ..default()
+            }),
+            ..default()
+        }).set(AssetPlugin {
+            meta_check: AssetMetaCheck::Never,
+            ..default()
+        }))
         .add_plugins(PhysicsPlugins::default())
         .init_state::<GameState>()
         // Global Startup

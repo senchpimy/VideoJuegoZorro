@@ -62,8 +62,8 @@ pub fn spawn_player(
     let graph_handle = graphs.add(graph);
 
     commands.spawn((
-        SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset("models/fox.glb"))),
-        Transform::from_translation(start_pos).with_scale(Vec3::splat(0.01)),
+        SceneRoot(asset_server.load("models/fox.glb#Scene0")),
+        Transform::from_translation(start_pos).with_scale(Vec3::splat(0.015)),
         Player::default(),
         PlayerAnimation {
             walk_node,

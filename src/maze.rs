@@ -125,7 +125,7 @@ pub fn spawn_world(
     commands.spawn((
         DirectionalLight {
             illuminance: 32000.0,
-            shadows_enabled: true,
+            shadows_enabled: false,
             ..default()
         },
         Transform::from_xyz(50.0, 100.0, 50.0).looking_at(MAZE_OFFSET, Vec3::Y),
