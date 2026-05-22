@@ -172,7 +172,7 @@ pub fn spawn_tutorial(
         floor_material.clone(),
         wall_material.clone(),
         room5_pos,
-        "FISICAS\nCUBOS QUE CAEN",
+        "FISICAS\nCTRL PARA AGARRAR\nCAMINA PARA EMPUJAR",
         false,
         false,
         false,

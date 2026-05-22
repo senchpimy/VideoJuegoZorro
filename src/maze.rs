@@ -2,8 +2,25 @@ use crate::collision::Wall;
 use crate::enemy::{Enemy, EnemyType};
 use crate::platform::MovingPlatform;
 use crate::powerup::{Chest, PowerUpItem, PowerUpType};
+use crate::tutorial::PhysicsCube;
 use bevy::prelude::*;
 use avian3d::prelude::{RigidBody, Collider};
+
+#[derive(Component)]
+pub struct PuzzleBlock {
+    pub color: PuzzleColor,
+}
+
+#[derive(Component)]
+pub struct TargetZone {
+    pub color: PuzzleColor,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PuzzleColor {
+    Red,
+    Blue,
+}
 
 // 1 = Wall, 0 = Empty, 2 = Player Start, 3 = Moving Platform Pit (Removed), 4 = Lava Static Pit, 5 = Enemy Spawn, 6 = Chest, 7 = Speed Gem, 8 = Shield Gem, 9 = Healing Gem, 11 = Phantom (Invisible Enemy)
 pub const MAZE_DATA: [[u8; 30]; 30] = [
@@ -391,6 +408,117 @@ fn spawn_maze_at(
             }
         }
     }
+
+    // Spawn Red Puzzle Block
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(1.2, 1.2, 1.2))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(1.0, 0.1, 0.1),
+            emissive: LinearRgba::from_f32_array([2.0, 0.2, 0.2, 1.0]),
+            perceptual_roughness: 0.1,
+            ..default()
+        })),
+        Transform::from_translation(offset + Vec3::new(5.0 * 4.0, 1.0, 1.0 * 4.0)),
+        RigidBody::Dynamic,
+        Collider::cuboid(1.2, 1.2, 1.2),
+        PhysicsCube { is_held: false },
+        PuzzleBlock {
+            color: PuzzleColor::Red,
+        },
+        MazeElement,
+    ));
+
+    // Spawn Blue Puzzle Block
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(1.2, 1.2, 1.2))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(0.1, 0.3, 1.0),
+            emissive: LinearRgba::from_f32_array([0.2, 0.6, 5.0, 1.0]),
+            perceptual_roughness: 0.1,
+            ..default()
+        })),
+        Transform::from_translation(offset + Vec3::new(21.0 * 4.0, 1.0, 1.0 * 4.0)),
+        RigidBody::Dynamic,
+        Collider::cuboid(1.2, 1.2, 1.2),
+        PhysicsCube { is_held: false },
+        PuzzleBlock {
+            color: PuzzleColor::Blue,
+        },
+        MazeElement,
+    ));
+
+    // Spawn Red Target Zone
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(3.0, 3.0))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgba(1.0, 0.1, 0.1, 0.5),
+            alpha_mode: AlphaMode::Blend,
+            emissive: LinearRgba::from_f32_array([0.5, 0.05, 0.05, 1.0]),
+            ..default()
+        })),
+        Transform::from_translation(offset + Vec3::new(3.0 * 4.0, 0.05, 28.0 * 4.0)),
+        TargetZone {
+            color: PuzzleColor::Red,
+        },
+        MazeElement,
+    ));
+
+    // Spawn Blue Target Zone
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(3.0, 3.0))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgba(0.1, 0.3, 1.0, 0.5),
+            alpha_mode: AlphaMode::Blend,
+            emissive: LinearRgba::from_f32_array([0.05, 0.15, 1.0, 1.0]),
+            ..default()
+        })),
+        Transform::from_translation(offset + Vec3::new(15.0 * 4.0, 0.05, 28.0 * 4.0)),
+        TargetZone {
+            color: PuzzleColor::Blue,
+        },
+        MazeElement,
+    ));
+
+    // Spawning 3D In-World labels to guide the player
+    commands.spawn((
+        Text2d::new("ZONA ROJA\nDEPOSITAR BLOQUE ROJO"),
+        TextFont {
+            font_size: 24.0,
+            ..default()
+        },
+        TextColor(Color::srgb(1.0, 0.5, 0.5)),
+        Transform::from_translation(offset + Vec3::new(3.0 * 4.0, 2.5, 28.0 * 4.0))
+            .with_rotation(Quat::from_rotation_y(std::f32::consts::PI)),
+        MazeElement,
+    ));
+
+    commands.spawn((
+        Text2d::new("ZONA AZUL\nDEPOSITAR BLOQUE AZUL"),
+        TextFont {
+            font_size: 24.0,
+            ..default()
+        },
+        TextColor(Color::srgb(0.5, 0.7, 1.0)),
+        Transform::from_translation(offset + Vec3::new(15.0 * 4.0, 2.5, 28.0 * 4.0))
+            .with_rotation(Quat::from_rotation_y(std::f32::consts::PI)),
+        MazeElement,
+    ));
+
+    commands.spawn((
+        Text2d::new("BLOQUE ROJO"),
+        TextFont { font_size: 20.0, ..default() },
+        TextColor(Color::srgb(1.0, 0.5, 0.5)),
+        Transform::from_translation(offset + Vec3::new(5.0 * 4.0, 2.5, 1.0 * 4.0)),
+        MazeElement,
+    ));
+
+    commands.spawn((
+        Text2d::new("BLOQUE AZUL"),
+        TextFont { font_size: 20.0, ..default() },
+        TextColor(Color::srgb(0.5, 0.7, 1.0)),
+        Transform::from_translation(offset + Vec3::new(21.0 * 4.0, 2.5, 1.0 * 4.0)),
+        MazeElement,
+    ));
 }
 
 pub fn cleanup_world(
@@ -409,4 +537,60 @@ pub fn cleanup_world(
         commands.entity(e).despawn();
     }
     commands.insert_resource(ClearColor::default());
+}
+
+pub fn check_puzzle_completion(
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    q_blocks: Query<(&Transform, &PuzzleBlock)>,
+    q_targets: Query<(&Transform, &TargetZone, &MeshMaterial3d<StandardMaterial>)>,
+    mut next_state: ResMut<NextState<crate::GameState>>,
+) {
+    let mut red_satisfied = false;
+    let mut blue_satisfied = false;
+
+    // Check each block against each target zone
+    for (block_transform, block) in q_blocks.iter() {
+        for (target_transform, target, _) in q_targets.iter() {
+            if block.color == target.color {
+                let dist_xz = Vec2::new(block_transform.translation.x, block_transform.translation.z)
+                    .distance(Vec2::new(target_transform.translation.x, target_transform.translation.z));
+                
+                if dist_xz < 2.0 {
+                    match block.color {
+                        PuzzleColor::Red => red_satisfied = true,
+                        PuzzleColor::Blue => blue_satisfied = true,
+                    }
+                }
+            }
+        }
+    }
+
+    // Now update target materials based on satisfaction!
+    for (_, target, mat_handle) in q_targets.iter() {
+        let is_satisfied = match target.color {
+            PuzzleColor::Red => red_satisfied,
+            PuzzleColor::Blue => blue_satisfied,
+        };
+
+        if let Some(material) = materials.get_mut(mat_handle) {
+            if is_satisfied {
+                // Bright glow when satisfied
+                material.emissive = match target.color {
+                    PuzzleColor::Red => LinearRgba::from_f32_array([10.0, 1.0, 1.0, 1.0]),
+                    PuzzleColor::Blue => LinearRgba::from_f32_array([1.0, 3.0, 15.0, 1.0]),
+                };
+            } else {
+                // Soft glow when not satisfied
+                material.emissive = match target.color {
+                    PuzzleColor::Red => LinearRgba::from_f32_array([0.5, 0.05, 0.05, 1.0]),
+                    PuzzleColor::Blue => LinearRgba::from_f32_array([0.05, 0.15, 1.0, 1.0]),
+                };
+            }
+        }
+    }
+
+    if red_satisfied && blue_satisfied {
+        info!("Puzzle complete! Victory!");
+        next_state.set(crate::GameState::GameWon);
+    }
 }

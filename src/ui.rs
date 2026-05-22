@@ -176,3 +176,69 @@ pub fn death_screen_action(
         next_state.set(crate::GameState::Playing);
     }
 }
+
+#[derive(Component)]
+pub struct WinScreen;
+
+pub fn setup_win_screen(mut commands: Commands) {
+    commands.spawn((
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            position_type: PositionType::Absolute,
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            row_gap: Val::Px(25.0),
+            ..default()
+        },
+        BackgroundColor(Color::srgb(0.0, 0.2, 0.0).with_alpha(0.9)),
+        WinScreen,
+        GlobalZIndex(100),
+    )).with_children(|parent| {
+        parent.spawn((
+            Text::new("¡VICTORIA!"),
+            TextFont { font_size: 80.0, ..default() },
+            TextColor(Color::srgb(0.0, 1.0, 0.3)),
+        ));
+
+        parent.spawn((
+            Text::new("¡Has colocado ambos bloques en sus zonas correspondientes!"),
+            TextFont { font_size: 24.0, ..default() },
+            TextColor(Color::srgb(0.8, 1.0, 0.8)),
+        ));
+
+        parent.spawn((
+            Text::new("PRESIONA ESPACIO PARA REINICIAR"),
+            TextFont { font_size: 30.0, ..default() },
+            TextColor(Color::WHITE),
+        ));
+
+        parent.spawn((
+            Text::new("PRESIONA ESC PARA IR AL MENÚ"),
+            TextFont { font_size: 20.0, ..default() },
+            TextColor(Color::srgb(0.7, 0.7, 0.7)),
+        ));
+    });
+}
+
+pub fn cleanup_win_screen(mut commands: Commands, query: Query<Entity, With<WinScreen>>) {
+    for entity in &query {
+        commands.entity(entity).despawn();
+    }
+}
+
+pub fn win_screen_action(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<crate::GameState>>,
+    mut commands: Commands,
+    audio_assets: Res<UiAudioAssets>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        commands.spawn(AudioPlayer(audio_assets.revive.clone()));
+        next_state.set(crate::GameState::Playing);
+    } else if keyboard_input.just_pressed(KeyCode::Escape) {
+        commands.spawn(AudioPlayer(audio_assets.click.clone()));
+        next_state.set(crate::GameState::Menu);
+    }
+}

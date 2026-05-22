@@ -23,6 +23,7 @@ pub enum GameState {
     Playing,
     Paused,
     GameOver,
+    GameWon,
 }
 
 #[derive(Resource)]
@@ -93,6 +94,7 @@ fn main() {
             ui::update_ui.run_if(in_state(GameState::Playing)),
             camera::camera_follow.run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
             toggle_pause.run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
+            maze::check_puzzle_completion.run_if(in_state(GameState::Playing)),
         ))
         .add_systems(OnExit(GameState::Playing), (
             maze::cleanup_world,
@@ -111,6 +113,11 @@ fn main() {
         .add_systems(OnEnter(GameState::GameOver), ui::setup_death_screen)
         .add_systems(Update, ui::death_screen_action.run_if(in_state(GameState::GameOver)))
         .add_systems(OnExit(GameState::GameOver), ui::cleanup_death_screen)
+
+        // GameWon State
+        .add_systems(OnEnter(GameState::GameWon), ui::setup_win_screen)
+        .add_systems(Update, ui::win_screen_action.run_if(in_state(GameState::GameWon)))
+        .add_systems(OnExit(GameState::GameWon), ui::cleanup_win_screen)
 
         .run();
 }
