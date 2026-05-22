@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mientras</title>
+    <link data-trunk rel="copy-dir" href="assets" />
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: sans-serif;
+            color: #eee;
+        }
+
+        canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100vw;
+            max-height: 100vh;
+            object-fit: contain;
+            outline: none;
+        }
+
+        #loading {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loading">Cargando...</div>
+    <canvas id="bevy"></canvas>
+
+    <script>
+        // Hide loading when the canvas gets created
+        const observer = new MutationObserver((mutations) => {
+            const canvas = document.querySelector('canvas');
+            if (canvas) {
+                const loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    </script>
+</body>
+
+</html>
