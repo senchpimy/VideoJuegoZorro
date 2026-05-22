@@ -436,8 +436,9 @@ pub fn check_portal_teleport(
 
             if xz_dist < 1.8 {
                 info!("Teleporting player from tutorial to the maze!");
-                // Teleport to the maze starting position (cell 2)
-                player_transform.translation = crate::maze::MAZE_OFFSET + Vec3::new(2.0, 1.0, 2.0);
+                // Teleport to the maze starting position (index 1, 1)
+                // Each cell is 4.0 units, so index (1,1) is at offset + (4, 1, 4)
+                player_transform.translation = crate::maze::MAZE_OFFSET + Vec3::new(4.0, 1.0, 4.0);
 
                 // Cleanup tutorial elements including the controls UI
                 for entity in &elements_query {

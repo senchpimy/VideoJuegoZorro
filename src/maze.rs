@@ -410,42 +410,94 @@ fn spawn_maze_at(
     }
 
     // Spawn Red Puzzle Block
+    info!("Spawning Red Puzzle Block at entrance...");
     commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(1.2, 1.2, 1.2))),
+        Mesh3d(meshes.add(Cuboid::new(2.0, 2.0, 2.0))),
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::srgb(1.0, 0.1, 0.1),
-            emissive: LinearRgba::from_f32_array([2.0, 0.2, 0.2, 1.0]),
+            emissive: LinearRgba::from_f32_array([20.0, 2.0, 2.0, 1.0]),
             perceptual_roughness: 0.1,
             ..default()
         })),
-        Transform::from_translation(offset + Vec3::new(5.0 * 4.0, 1.0, 1.0 * 4.0)),
+        Transform::from_translation(offset + Vec3::new(3.0 * 4.0, 3.0, 1.0 * 4.0)),
         RigidBody::Dynamic,
-        Collider::cuboid(1.2, 1.2, 1.2),
+        Collider::cuboid(2.0, 2.0, 2.0),
         PhysicsCube { is_held: false },
         PuzzleBlock {
             color: PuzzleColor::Red,
         },
         MazeElement,
-    ));
+    )).with_children(|parent| {
+        // Intense glow light
+        parent.spawn(PointLight {
+            color: Color::srgb(1.0, 0.2, 0.2),
+            intensity: 100000.0,
+            range: 20.0,
+            ..default()
+        });
+        // Floating beacon sphere high above
+        parent.spawn((
+            Mesh3d(meshes.add(Sphere::new(1.0).mesh())),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::srgb(1.0, 0.1, 0.1),
+                emissive: LinearRgba::from_f32_array([50.0, 5.0, 5.0, 1.0]),
+                ..default()
+            })),
+            Transform::from_xyz(0.0, 12.0, 0.0),
+        ));
+        // 3D Label
+        parent.spawn((
+            Text2d::new("!!! BLOQUE ROJO !!!"),
+            TextFont { font_size: 40.0, ..default() },
+            TextColor(Color::srgb(1.0, 0.2, 0.2)),
+            Transform::from_xyz(0.0, 14.0, 0.0),
+        ));
+    });
 
     // Spawn Blue Puzzle Block
+    info!("Spawning Blue Puzzle Block at entrance...");
     commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(1.2, 1.2, 1.2))),
+        Mesh3d(meshes.add(Cuboid::new(2.0, 2.0, 2.0))),
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::srgb(0.1, 0.3, 1.0),
-            emissive: LinearRgba::from_f32_array([0.2, 0.6, 5.0, 1.0]),
+            emissive: LinearRgba::from_f32_array([2.0, 6.0, 30.0, 1.0]),
             perceptual_roughness: 0.1,
             ..default()
         })),
-        Transform::from_translation(offset + Vec3::new(21.0 * 4.0, 1.0, 1.0 * 4.0)),
+        Transform::from_translation(offset + Vec3::new(1.0 * 4.0, 3.0, 3.0 * 4.0)),
         RigidBody::Dynamic,
-        Collider::cuboid(1.2, 1.2, 1.2),
+        Collider::cuboid(2.0, 2.0, 2.0),
         PhysicsCube { is_held: false },
         PuzzleBlock {
             color: PuzzleColor::Blue,
         },
         MazeElement,
-    ));
+    )).with_children(|parent| {
+        // Intense glow light
+        parent.spawn(PointLight {
+            color: Color::srgb(0.2, 0.5, 1.0),
+            intensity: 100000.0,
+            range: 20.0,
+            ..default()
+        });
+        // Floating beacon sphere high above
+        parent.spawn((
+            Mesh3d(meshes.add(Sphere::new(1.0).mesh())),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::srgb(0.1, 0.3, 1.0),
+                emissive: LinearRgba::from_f32_array([5.0, 15.0, 100.0, 1.0]),
+                ..default()
+            })),
+            Transform::from_xyz(0.0, 12.0, 0.0),
+        ));
+        // 3D Label
+        parent.spawn((
+            Text2d::new("!!! BLOQUE AZUL !!!"),
+            TextFont { font_size: 40.0, ..default() },
+            TextColor(Color::srgb(0.3, 0.6, 1.0)),
+            Transform::from_xyz(0.0, 14.0, 0.0),
+        ));
+    });
 
     // Spawn Red Target Zone
     commands.spawn((
