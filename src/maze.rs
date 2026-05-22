@@ -297,7 +297,7 @@ fn spawn_maze_at(
                 ));
             }
             if cell == 11 {
-                // DEBUG: red cube to verify spawn position is visible
+                // Chasing Phantom enemy — represented as a glowing red cube
                 commands.spawn((
                     Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
                     MeshMaterial3d(materials.add(StandardMaterial {
@@ -306,13 +306,6 @@ fn spawn_maze_at(
                         ..default()
                     })),
                     Transform::from_translation(Vec3::new(pos.x, 2.5, pos.z)),
-                    MazeElement,
-                ));
-                // Phantom: chases the player, uses the worm model.
-                commands.spawn((
-                    SceneRoot(asset_server.load("models/sign_enemy.glb#Scene0")),
-                    Transform::from_translation(Vec3::new(pos.x, 2.5, pos.z))
-                        .with_scale(Vec3::splat(0.012)),
                     Enemy {
                         enemy_type: EnemyType::Phantom,
                         speed: 3.5,

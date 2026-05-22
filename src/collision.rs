@@ -5,10 +5,10 @@ pub struct Wall {
     pub half_size: Vec3,
 }
 
-pub fn check_collision(
+pub fn check_collision<F: bevy::ecs::query::QueryFilter>(
     pos: Vec3, 
     player_radius: f32,
-    wall_query: &Query<(&Transform, &Wall), (With<Wall>, Without<super::player::Player>)>
+    wall_query: &Query<(&Transform, &Wall), F>
 ) -> bool {
     for (wall_transform, wall) in wall_query {
         let wall_pos = wall_transform.translation;

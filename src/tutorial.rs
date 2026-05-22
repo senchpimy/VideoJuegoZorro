@@ -12,6 +12,9 @@ pub struct PhysicsCube {
     pub is_held: bool,
 }
 
+#[derive(Component)]
+pub struct MagicPortal;
+
 #[derive(Resource)]
 pub struct CubeSpawnTimer(pub Timer);
 
@@ -175,6 +178,27 @@ pub fn spawn_tutorial(
         false,
         true,
     );
+
+    // Magic Portal at the end of Room 5 (where the physics blocks drop)
+    commands.spawn((
+        SceneRoot(asset_server.load("models/magic_portal.glb#Scene0")),
+        Transform::from_translation(room5_pos + Vec3::new(6.0, 0.1, 0.0))
+            .with_scale(Vec3::splat(1.5)),
+        MagicPortal,
+        TutorialElement,
+    ));
+
+    // Magical glowing cyan light for the portal
+    commands.spawn((
+        PointLight {
+            color: Color::srgb(0.0, 0.8, 1.0),
+            intensity: 80000.0,
+            range: 15.0,
+            ..default()
+        },
+        Transform::from_translation(room5_pos + Vec3::new(6.0, 2.5, 0.0)),
+        TutorialElement,
+    ));
 
     // Lights
     for pos in [TUTORIAL_OFFSET, room2_pos, room3_pos, room4_pos, room5_pos] {
@@ -392,5 +416,25 @@ fn spawn_wall(
 pub fn cleanup_tutorial(mut commands: Commands, query: Query<Entity, With<TutorialElement>>) {
     for entity in &query {
         commands.entity(entity).despawn();
+    }
+}
+
+pub fn check_portal_teleport(
+    mut player_query: Query<&mut Transform, With<crate::player::Player>>,
+    portal_query: Query<&Transform, (With<MagicPortal>, Without<crate::player::Player>)>,
+) {
+    if let Ok(mut player_transform) = player_query.single_mut() {
+        for portal_transform in &portal_query {
+            // Check flat XZ horizontal distance to make triggering portal feel smooth and responsive
+            let player_pos = player_transform.translation;
+            let portal_pos = portal_transform.translation;
+            let xz_dist = Vec2::new(player_pos.x, player_pos.z).distance(Vec2::new(portal_pos.x, portal_pos.z));
+
+            if xz_dist < 1.8 {
+                info!("Teleporting player from tutorial to the maze!");
+                // Teleport to the maze starting position (cell 2)
+                player_transform.translation = crate::maze::MAZE_OFFSET + Vec3::new(2.0, 1.0, 2.0);
+            }
+        }
     }
 }

@@ -148,7 +148,8 @@ pub fn play_enemy_animations(
 pub fn move_enemies(
     time: Res<Time>,
     player_query: Query<&Transform, With<Player>>,
-    mut enemy_query: Query<(&mut Transform, &mut Enemy), Without<Player>>,
+    mut enemy_query: Query<(&mut Transform, &mut Enemy), (Without<Player>, Without<crate::collision::Wall>)>,
+    wall_query: Query<(&Transform, &crate::collision::Wall), (With<crate::collision::Wall>, Without<Player>, Without<Enemy>)>,
 ) {
     let dt = time.delta_secs();
     let player_pos = player_query.iter().next().map(|t| t.translation).unwrap_or(Vec3::ZERO);
@@ -179,8 +180,7 @@ pub fn move_enemies(
                     transform.rotation = transform.rotation.slerp(target_rotation, 0.1);
                 }
             }
-            // Worm and Phantom share the same XZ-only chase logic.
-            // Phantom is faster (speed 3.5 vs 2.0) but otherwise identical.
+            // Worm and Phantom share the same XZ-only chase logic with wall collision checks.
             EnemyType::Worm | EnemyType::Phantom => {
                 if dist > 0.5 {
                     let diff_xz = Vec3::new(
@@ -190,7 +190,25 @@ pub fn move_enemies(
                     );
                     if diff_xz.length() > 0.1 {
                         let dir = diff_xz.normalize();
-                        transform.translation += dir * enemy.speed * dt;
+                        let step = dir * enemy.speed * dt;
+                        
+                        let enemy_radius = 0.45; // slightly smaller than half-size for smooth corner sliding
+                        let mut next_pos = transform.translation;
+
+                        // Try moving along X axis
+                        let test_pos_x = Vec3::new(next_pos.x + step.x, next_pos.y, next_pos.z);
+                        if !crate::collision::check_collision(test_pos_x, enemy_radius, &wall_query) {
+                            next_pos.x = test_pos_x.x;
+                        }
+
+                        // Try moving along Z axis
+                        let test_pos_z = Vec3::new(next_pos.x, next_pos.y, next_pos.z + step.z);
+                        if !crate::collision::check_collision(test_pos_z, enemy_radius, &wall_query) {
+                            next_pos.z = test_pos_z.z;
+                        }
+
+                        transform.translation = next_pos;
+
                         let target_rotation = Quat::from_rotation_y(f32::atan2(dir.x, dir.z));
                         transform.rotation = transform.rotation.slerp(target_rotation, 0.1);
                     }

@@ -66,6 +66,7 @@ fn main() {
             powerup::check_chest_interactions.run_if(in_state(GameState::Playing)),
             tutorial::spawn_physics_cubes.run_if(in_state(GameState::Playing)),
             tutorial::update_physics_cubes.run_if(in_state(GameState::Playing)),
+            tutorial::check_portal_teleport.run_if(in_state(GameState::Playing)),
             ui::update_ui.run_if(in_state(GameState::Playing)),
             camera::camera_follow.run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
             toggle_pause.run_if(in_state(GameState::Playing).or(in_state(GameState::Paused))),
