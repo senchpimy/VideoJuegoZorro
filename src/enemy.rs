@@ -190,17 +190,23 @@ pub fn check_enemy_player_collision(
         let player_pos = player_transform.translation;
         for enemy_transform in &enemy_query {
             let enemy_pos = enemy_transform.translation;
-            let dist = player_pos.distance(enemy_pos);
             
-            if dist < (player_radius + enemy_radius) {
+            // Check horizontal distance (More generous radius: 1.2 total)
+            let xz_dist = Vec2::new(player_pos.x, player_pos.z).distance(Vec2::new(enemy_pos.x, enemy_pos.z));
+            // Check vertical overlap (Much more generous: 4.0 units)
+            let y_diff = (player_pos.y - enemy_pos.y).abs();
+            
+            if xz_dist < 1.2 && y_diff < 4.0 {
                 if player.health > 0 {
                     player.health -= 1;
+                    info!("!!! PLAYER DAMAGED !!! Health: {}", player.health);
                 }
                 player.invulnerable_timer = 1.5;
                 
                 // Knockback
-                let push_dir = (player_pos - enemy_pos).normalize();
-                player_transform.translation += Vec3::new(push_dir.x, 0.0, push_dir.z) * 1.6;
+                let diff = player_pos - enemy_pos;
+                let push_dir = Vec3::new(diff.x, 0.0, diff.z).normalize_or_zero();
+                player_transform.translation += push_dir * 2.0;
                 break;
             }
         }

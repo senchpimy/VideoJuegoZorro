@@ -284,7 +284,7 @@ fn spawn_maze_at(
                 ];
                 commands.spawn((
                     SceneRoot(asset_server.load("models/scorcher_enemy.glb#Scene0")),
-                    Transform::from_translation(Vec3::new(pos.x, 12., pos.z))
+                    Transform::from_translation(Vec3::new(pos.x, 8.0, pos.z))
                         .with_scale(Vec3::splat(0.012)),
                     Enemy {
                         speed: 1.5,

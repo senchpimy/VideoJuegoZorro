@@ -53,10 +53,10 @@ pub fn spawn_tutorial(
         room3_pos, "COMBATE\nSHIFT PARA ATACAR", true, true, false, false);
     
     commands.spawn((
-        SceneRoot(asset_server.load("models/scorcher_enemy.glb#Scene0")),
-        Transform::from_translation(room3_pos + Vec3::new(0.0, 1.2, -4.0))
-            .with_scale(Vec3::splat(0.012)),
-        Enemy {
+       SceneRoot(asset_server.load("models/scorcher_enemy.glb#Scene0")),
+       Transform::from_translation(room3_pos + Vec3::new(0.0, 2.5, -4.0))
+           .with_scale(Vec3::splat(0.012)),
+       Enemy {
             speed: 0.0,
             patrol_points: vec![],
             current_waypoint: 0,
