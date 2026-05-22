@@ -18,6 +18,7 @@ pub struct Player {
     pub speed_boost_timer: f32,
     pub shield_timer: f32,
     pub held_cube: Option<Entity>,
+    pub damage_flash_timer: f32,
 }
 
 impl Default for Player {
@@ -32,6 +33,7 @@ impl Default for Player {
             speed_boost_timer: 0.0,
             shield_timer: 0.0,
             held_cube: None,
+            damage_flash_timer: 0.0,
         }
     }
 }
@@ -183,6 +185,9 @@ pub fn player_movement(
         if player.shield_timer > 0.0 {
             player.shield_timer -= dt;
         }
+        if player.damage_flash_timer > 0.0 {
+            player.damage_flash_timer = (player.damage_flash_timer - dt).max(0.0);
+        }
 
         // Falling off the world (though with terrain it's harder)
         if player_transform.translation.y < -10.0 {
@@ -190,6 +195,7 @@ pub fn player_movement(
                 player.health -= 1.5;
             }
             player.invulnerable_timer = 1.5;
+            player.damage_flash_timer = 1.2;
             player_transform.translation = Vec3::new(0.0, 10.0, 0.0); 
             player.velocity_y = 0.0;
         }

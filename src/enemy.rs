@@ -281,6 +281,7 @@ pub fn check_enemy_player_collision(
                     // Play damage sound
                     commands.spawn(AudioPlayer(audio_assets.damage.clone()));
                 }
+                player.damage_flash_timer = 1.2;
                 player.invulnerable_timer = 1.5;
                 
                 // Knockback

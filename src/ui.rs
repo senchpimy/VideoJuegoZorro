@@ -14,6 +14,10 @@ pub struct PowerUpText;
 #[derive(Component)]
 pub struct GameUi;
 
+/// Marks the 4 edge panels that form the red damage vignette.
+#[derive(Component)]
+pub struct DamageVignette;
+
 pub fn setup_ui(mut commands: Commands) {
     // Parent container for top-left UI
     // In Bevy 0.15+, UI is rendered by the main camera by default.
@@ -83,6 +87,75 @@ pub fn setup_ui(mut commands: Commands) {
             PowerUpText,
         ));
     });
+
+    // ── Damage vignette ─────────────────────────────────────────────────────
+    // Four semi-transparent red panels pinned to each screen edge.
+    // Their alpha is driven by `Player::damage_flash_timer` every frame.
+    let vignette_color = Color::srgba(0.85, 0.0, 0.0, 0.0); // invisible until hit
+
+    // Top
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(0.0),
+            left: Val::Px(0.0),
+            width: Val::Percent(100.0),
+            height: Val::Px(120.0),
+            ..default()
+        },
+        BackgroundColor(vignette_color),
+        DamageVignette,
+        GameUi,
+        GlobalZIndex(50),
+    ));
+
+    // Bottom
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            bottom: Val::Px(0.0),
+            left: Val::Px(0.0),
+            width: Val::Percent(100.0),
+            height: Val::Px(120.0),
+            ..default()
+        },
+        BackgroundColor(vignette_color),
+        DamageVignette,
+        GameUi,
+        GlobalZIndex(50),
+    ));
+
+    // Left
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(0.0),
+            left: Val::Px(0.0),
+            width: Val::Px(120.0),
+            height: Val::Percent(100.0),
+            ..default()
+        },
+        BackgroundColor(vignette_color),
+        DamageVignette,
+        GameUi,
+        GlobalZIndex(50),
+    ));
+
+    // Right
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(0.0),
+            right: Val::Px(0.0),
+            width: Val::Px(120.0),
+            height: Val::Percent(100.0),
+            ..default()
+        },
+        BackgroundColor(vignette_color),
+        DamageVignette,
+        GameUi,
+        GlobalZIndex(50),
+    ));
 }
 
 pub fn cleanup_ui(mut commands: Commands, query: Query<Entity, With<GameUi>>) {
@@ -95,6 +168,7 @@ pub fn update_ui(
     player_query: Query<&Player>,
     mut text_query: Query<(&mut Text, Option<&ScoreText>, Option<&PowerUpText>)>,
     mut bar_query: Query<&mut Node, With<HealthBar>>,
+    mut vignette_query: Query<&mut BackgroundColor, With<DamageVignette>>,
 ) {
     if let Some(player) = player_query.iter().next() {
         // Update texts
@@ -122,6 +196,14 @@ pub fn update_ui(
         if let Some(mut bar_node) = bar_query.iter_mut().next() {
             let percentage = (player.health / player.max_health) * 100.0;
             bar_node.width = Val::Percent(percentage.max(0.0));
+        }
+
+        // Update damage vignette: smooth ease-out fade
+        // timer goes 1.2 → 0.0, alpha peaks at 0.85 and curves out
+        let t = (player.damage_flash_timer / 1.2).clamp(0.0, 1.0);
+        let alpha = t * t * 0.85; // quadratic ease-in gives a snappy flash then smooth fade
+        for mut bg in &mut vignette_query {
+            bg.0 = Color::srgba(0.85, 0.0, 0.0, alpha);
         }
     }
 }
