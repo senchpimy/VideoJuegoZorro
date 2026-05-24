@@ -1,68 +1,74 @@
 <!DOCTYPE html>
-<html lang="es">
-
+<html lang="en-us">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mientras</title>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Unity Web Player | Mientras</title>
+    <link rel="shortcut icon" href="https://robertsants47.github.io/Programacion_Video_Juegos1/TemplateData/favicon.ico">
     <link data-trunk rel="copy-dir" href="assets" />
     <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: sans-serif;
-            color: #eee;
-        }
-
-        canvas {
-            display: block;
-            width: 100% !important;
-            height: 100% !important;
-            max-width: 100vw;
-            max-height: 100vh;
-            object-fit: contain;
-            outline: none;
-        }
-
-        #loading {
-            position: absolute;
-            font-size: 24px;
-            font-weight: bold;
-        }
+        body { padding: 0; margin: 0; background-color: white; overflow: hidden; width: 100vw; height: 100vh; }
+        #unity-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 960px; height: 638px; }
+        #unity-canvas { background: #231F20; width: 960px; height: 600px; display: block; outline: none; }
+        
+        #unity-loading-bar { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: block; z-index: 10; pointer-events: none; }
+        #unity-logo { width: 154px; height: 130px; background: url('https://robertsants47.github.io/Programacion_Video_Juegos1/TemplateData/unity-logo-dark.png') no-repeat center }
+        #unity-progress-bar-empty { width: 141px; height: 18px; margin-top: 10px; margin-left: 6.5px; background: url('https://robertsants47.github.io/Programacion_Video_Juegos1/TemplateData/progress-bar-empty-dark.png') no-repeat center }
+        #unity-progress-bar-full { width: 0%; height: 18px; margin-top: 10px; background: url('https://robertsants47.github.io/Programacion_Video_Juegos1/TemplateData/progress-bar-full-dark.png') no-repeat center; transition: width 0.5s; }
+        
+        #unity-footer { position: relative; height: 38px; background-color: transparent; }
+        #unity-logo-title-footer { float:left; width: 102px; height: 38px; background: url('https://robertsants47.github.io/Programacion_Video_Juegos1/TemplateData/unity-logo-title-footer.png') no-repeat center }
+        #unity-build-title { float: right; margin-right: 10px; line-height: 38px; font-family: arial; font-size: 18px; color: #222; font-weight: bold; }
+        #unity-fullscreen-button { cursor:pointer; float: right; width: 38px; height: 38px; background: url('https://robertsants47.github.io/Programacion_Video_Juegos1/TemplateData/fullscreen-button.png') no-repeat center }
     </style>
 </head>
-
 <body>
-    <div id="loading">Cargando...</div>
-    <canvas id="bevy"></canvas>
+    <div id="unity-container">
+        <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
+        <div id="unity-loading-bar">
+            <div id="unity-logo"></div>
+            <div id="unity-progress-bar-empty">
+                <div id="unity-progress-bar-full" style="width: 0%;"></div>
+            </div>
+        </div>
+        <div id="unity-footer">
+            <div id="unity-logo-title-footer"></div>
+            <div id="unity-fullscreen-button"></div>
+            <div id="unity-build-title">Mientras</div>
+        </div>
+    </div>
 
     <script>
-        // Hide loading when the canvas gets created
-        const observer = new MutationObserver((mutations) => {
-            const canvas = document.querySelector('canvas');
-            if (canvas) {
-                const loading = document.getElementById('loading');
-                if (loading) loading.style.display = 'none';
-                observer.disconnect();
+        // Fullscreen logic
+        document.querySelector("#unity-fullscreen-button").onclick = () => {
+            const container = document.querySelector("#unity-container");
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(err => {
+                    alert(`Error: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
             }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
+        };
 
-        // Audio context resumption proxy for Bevy/WebGL
+        // Simplified loading timer (3.5s)
+        (function() {
+            const loadingBar = document.getElementById('unity-loading-bar');
+            const progressFull = document.getElementById('unity-progress-bar-full');
+            
+            setTimeout(() => { if (progressFull) progressFull.style.width = "40%"; }, 500);
+            setTimeout(() => { if (progressFull) progressFull.style.width = "70%"; }, 1500);
+            setTimeout(() => { if (progressFull) progressFull.style.width = "100%"; }, 2500);
+
+            setTimeout(() => {
+                if (loadingBar) loadingBar.style.display = 'none';
+            }, 3500);
+        })();
+
+        // Audio context resumption proxy
         (function () {
             const audioContextList = [];
-            const userInputEventNames = [
-                "click", "contextmenu", "auxclick", "dblclick", "mousedown",
-                "mouseup", "pointerup", "touchend", "keydown", "keyup",
-            ];
+            const userInputEventNames = ["click", "keydown", "touchstart"];
 
             const OriginalAudioContext = self.AudioContext || self.webkitAudioContext;
             if (OriginalAudioContext) {
@@ -76,19 +82,9 @@
             }
 
             function resumeAllContexts(_event) {
-                let allResumed = true;
                 audioContextList.forEach((context) => {
-                    if (context.state !== "running") {
-                        context.resume();
-                        allResumed = false;
-                    }
+                    if (context.state !== "running") context.resume();
                 });
-
-                if (allResumed && audioContextList.length > 0) {
-                    userInputEventNames.forEach((eventName) => {
-                        document.removeEventListener(eventName, resumeAllContexts);
-                    });
-                }
             }
 
             userInputEventNames.forEach((eventName) => {
@@ -97,5 +93,4 @@
         })();
     </script>
 </body>
-
 </html>

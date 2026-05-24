@@ -46,7 +46,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                canvas: Some("#bevy".to_string()),
+                canvas: Some("#unity-canvas".to_string()),
                 fit_canvas_to_parent: true,
                 ..default()
             }),
