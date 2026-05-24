@@ -180,7 +180,7 @@ pub fn setup_ui(mut commands: Commands) {
             TextColor(Color::srgb(1.0, 1.0, 0.0)),
         ));
         parent.spawn((
-            Text::new("WASD: Moverse\nESPACIO: Saltar\nSHIFT: Atacar\nCTRL: Agarrar Bloques"),
+            Text::new("WASD: Moverse\nESPACIO: Saltar\nSHIFT: Atacar\nCTRL: Agarrar\nZ: Pausar"),
             TextFont { font_size: 16.0, ..default() },
             TextColor(Color::WHITE),
         ));

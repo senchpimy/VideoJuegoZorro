@@ -169,7 +169,7 @@ fn toggle_pause(
     mut commands: Commands,
     audio_assets: Res<UiAudioAssets>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::Escape) {
+    if keyboard_input.just_pressed(KeyCode::Escape) || keyboard_input.just_pressed(KeyCode::KeyZ) {
         commands.spawn(AudioPlayer(audio_assets.click.clone()));
         match state.get() {
             GameState::Playing => {
