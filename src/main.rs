@@ -59,6 +59,7 @@ fn main() {
         .init_state::<GameState>()
         .init_resource::<PausedFlag>()
         .add_systems(Startup, setup_ui_audio)
+        .add_systems(Update, spawn_music_on_interaction)
         // Global Startup
         .add_systems(Startup, camera::spawn_camera)
         
@@ -185,18 +186,9 @@ fn toggle_pause(
 }
 
 fn setup_ui_audio(mut commands: Commands, asset_server: Res<AssetServer>) {
+    info!("Loading audio assets...");
     let music = asset_server.load("audio/fondo.mp3");
     
-    // Spawn background music: Looping, lower volume (0.2)
-    commands.spawn((
-        AudioPlayer(music.clone()),
-        PlaybackSettings {
-            mode: bevy::audio::PlaybackMode::Loop,
-            volume: bevy::audio::Volume::Linear(0.2),
-            ..default()
-        },
-    ));
-
     commands.insert_resource(UiAudioAssets {
         click: asset_server.load("audio/click.mp3"),
         death: asset_server.load("audio/muerte.mp3"),
@@ -206,6 +198,27 @@ fn setup_ui_audio(mut commands: Commands, asset_server: Res<AssetServer>) {
         steps: asset_server.load("audio/pasos.mp3"),
         music,
     });
+}
+
+fn spawn_music_on_interaction(
+    mut commands: Commands,
+    audio_assets: Res<UiAudioAssets>,
+    mouse_button: Res<ButtonInput<MouseButton>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut spawned: Local<bool>,
+) {
+    if !*spawned && (mouse_button.just_pressed(MouseButton::Left) || keyboard_input.any_just_pressed([KeyCode::Space, KeyCode::Enter, KeyCode::KeyW, KeyCode::KeyA, KeyCode::KeyS, KeyCode::KeyD])) {
+        info!("User interaction detected, spawning background music!");
+        commands.spawn((
+            AudioPlayer(audio_assets.music.clone()),
+            PlaybackSettings {
+                mode: bevy::audio::PlaybackMode::Loop,
+                volume: bevy::audio::Volume::Linear(0.3),
+                ..default()
+            },
+        ));
+        *spawned = true;
+    }
 }
 
 pub fn exit_game(mut app_exit_events: MessageWriter<AppExit>) {

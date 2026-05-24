@@ -55,6 +55,46 @@
             }
         });
         observer.observe(document.body, { childList: true, subtree: true });
+
+        // Audio context resumption proxy for Bevy/WebGL
+        (function () {
+            const audioContextList = [];
+            const userInputEventNames = [
+                "click", "contextmenu", "auxclick", "dblclick", "mousedown",
+                "mouseup", "pointerup", "touchend", "keydown", "keyup",
+            ];
+
+            const OriginalAudioContext = self.AudioContext || self.webkitAudioContext;
+            if (OriginalAudioContext) {
+                self.AudioContext = new Proxy(OriginalAudioContext, {
+                    construct(target, args) {
+                        const result = new target(...args);
+                        audioContextList.push(result);
+                        return result;
+                    },
+                });
+            }
+
+            function resumeAllContexts(_event) {
+                let allResumed = true;
+                audioContextList.forEach((context) => {
+                    if (context.state !== "running") {
+                        context.resume();
+                        allResumed = false;
+                    }
+                });
+
+                if (allResumed && audioContextList.length > 0) {
+                    userInputEventNames.forEach((eventName) => {
+                        document.removeEventListener(eventName, resumeAllContexts);
+                    });
+                }
+            }
+
+            userInputEventNames.forEach((eventName) => {
+                document.addEventListener(eventName, resumeAllContexts);
+            });
+        })();
     </script>
 </body>
 

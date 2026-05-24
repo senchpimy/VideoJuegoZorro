@@ -38,7 +38,7 @@
             font-weight: bold;
         }
     </style>
-<link rel="modulepreload" href="/mientras-cc2c22cce0e07afd.js" crossorigin="anonymous" integrity="sha384-yxW9k76N73VDZ3heL9xSVHq5t576apmGPSx+41jJbI0MAfmCEZfHqpC72Ii8chPU"><link rel="preload" href="/mientras-cc2c22cce0e07afd_bg.wasm" crossorigin="anonymous" integrity="sha384-/6bIGdVpNHW6lluLXgpi79Xh/uJ9UkQizxoZ/qV00WocYh1FzmCPHO17s6mBHvFd" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/mientras-2bbdcf76da3d7940.js" crossorigin="anonymous" integrity="sha384-UShJqvv0VGePU0ICiib7zpKq/kpVNq3igwa9xgqvkoXWi8cvWJ6Ho29yGEbxTbOD"><link rel="preload" href="/mientras-2bbdcf76da3d7940_bg.wasm" crossorigin="anonymous" integrity="sha384-rvuW3ijskKaDtP90vs70zXYdFwHhPwakUSSBOj32tdUQTNxO6xNrpMd1Pf0rlXJD" as="fetch" type="application/wasm"></head>
 
 <body>
     <div id="loading">Cargando...</div>
@@ -55,11 +55,51 @@
             }
         });
         observer.observe(document.body, { childList: true, subtree: true });
+
+        // Audio context resumption proxy for Bevy/WebGL
+        (function () {
+            const audioContextList = [];
+            const userInputEventNames = [
+                "click", "contextmenu", "auxclick", "dblclick", "mousedown",
+                "mouseup", "pointerup", "touchend", "keydown", "keyup",
+            ];
+
+            const OriginalAudioContext = self.AudioContext || self.webkitAudioContext;
+            if (OriginalAudioContext) {
+                self.AudioContext = new Proxy(OriginalAudioContext, {
+                    construct(target, args) {
+                        const result = new target(...args);
+                        audioContextList.push(result);
+                        return result;
+                    },
+                });
+            }
+
+            function resumeAllContexts(_event) {
+                let allResumed = true;
+                audioContextList.forEach((context) => {
+                    if (context.state !== "running") {
+                        context.resume();
+                        allResumed = false;
+                    }
+                });
+
+                if (allResumed && audioContextList.length > 0) {
+                    userInputEventNames.forEach((eventName) => {
+                        document.removeEventListener(eventName, resumeAllContexts);
+                    });
+                }
+            }
+
+            userInputEventNames.forEach((eventName) => {
+                document.addEventListener(eventName, resumeAllContexts);
+            });
+        })();
     </script>
 
 <script type="module">
-import init, * as bindings from '/mientras-cc2c22cce0e07afd.js';
-const wasm = await init({ module_or_path: '/mientras-cc2c22cce0e07afd_bg.wasm' });
+import init, * as bindings from '/mientras-2bbdcf76da3d7940.js';
+const wasm = await init({ module_or_path: '/mientras-2bbdcf76da3d7940_bg.wasm' });
 
 
 window.wasmBindings = bindings;
